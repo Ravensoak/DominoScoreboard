@@ -1,0 +1,124 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Skyjo Scoreboard</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#f5f0e7">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header>
+  <h1><img class="pip" src="icon-192.png" alt=""> Skyjo Scoreboard</h1>
+  <div class="target">Upper limit is <b id="targetLbl">100</b> - lowest score wins</div>
+  <button class="btn small ghost" id="newGameBtn">New Game</button>
+  <details class="settings-menu" id="settingsMenu">
+    <summary class="btn small ghost" aria-label="Open settings" title="Settings">⚙</summary>
+    <div class="settings-panel">
+      <div class="settings-label">Appearance</div>
+      <div class="theme-options" role="group" aria-label="Choose a theme">
+        <button class="theme-choice" type="button" data-theme-choice="light">☀ Light</button>
+        <button class="theme-choice" type="button" data-theme-choice="dark">☾ Dark</button>
+      </div>
+      <label class="settings-toggle" for="halveAt100Toggle">
+        <span>100 Exact - Halve Score</span>
+        <input id="halveAt100Toggle" type="checkbox" role="switch" aria-label="100 Exact - Halve Score">
+      </label>
+      <a class="settings-link" href="instructions.html" id="instructionsLink">How to use the scorer <span aria-hidden="true">↗</span></a>
+      <button class="settings-link settings-refresh" type="button" id="refreshApp"><span aria-hidden="true">↻</span> Refresh App</button>
+      <button class="settings-close" type="button" id="settingsClose">Close</button>
+    </div>
+  </details>
+</header>
+
+<div id="winWrap"></div>
+
+<div class="results-backdrop" id="resultsBackdrop" hidden>
+  <section class="results-dialog" role="dialog" aria-modal="true" aria-labelledby="resultsTitle">
+    <div class="fireworks" aria-hidden="true">
+      <span class="firework firework-one"></span>
+      <span class="firework firework-two"></span>
+      <span class="firework firework-three"></span>
+    </div>
+    <div class="results-kicker">Game complete</div>
+    <h2 id="resultsTitle">🏆 Congratulations!</h2>
+    <p class="results-winner" id="resultsWinner"></p>
+    <div class="results-divider"></div>
+    <h3>Final standings</h3>
+    <ol class="results-list" id="resultsList"></ol>
+    <button class="btn primary results-return" id="returnToScoreboard">Return to scoreboard</button>
+  </section>
+</div>
+
+<!-- STANDINGS -->
+<section>
+  <div class="card">
+    <div class="head"><h2>Leaderboard</h2>
+      <span class="hint" style="margin-left:auto;">highest total first · lowest wins</span>
+    </div>
+    <div class="body"><div class="stand" id="standings"></div></div>
+  </div>
+</section>
+
+<!-- COMMIT (directly under the totals) -->
+<div class="commitbar">
+  <div class="inner">
+    <button class="btn primary" id="commitBtn">✔ End Round and Update Totals</button>
+  </div>
+</div>
+
+<!-- ROUND ENTRY -->
+<section>
+  <div class="card">
+    <div class="head"><h2 id="roundTitle">Round 1</h2></div>
+    <div class="body" id="roundEntry"></div>
+  </div>
+</section>
+
+<!-- HISTORY -->
+<section>
+  <div class="card">
+    <div class="head"><h2>Score history</h2>
+      <a class="history-graph-link" href="graph.html">Graph <span aria-hidden="true">↗</span></a>
+    </div>
+    <div class="body">
+      <div class="scroller"><table class="htable" id="history"></table></div>
+    </div>
+  </div>
+</section>
+
+<!-- ADD / MANAGE PLAYERS -->
+<section>
+  <div class="card">
+    <div class="head"><h2>Players</h2></div>
+    <div class="body">
+      <div class="addbar">
+        <input id="newPlayerName" placeholder="Add player name…" maxlength="18" autocomplete="off">
+        <button class="btn accent" id="addPlayerBtn">+ Add</button>
+      </div>
+      <div class="groups" id="groups"></div>
+    </div>
+  </div>
+</section>
+
+<div class="modal-back" id="modalBack">
+  <div class="modal">
+    <div class="modal-msg" id="modalMsg"></div>
+    <div class="modal-btns">
+      <button class="btn" id="modalCancel">Cancel</button>
+      <button class="btn primary" id="modalOk">OK</button>
+      <button class="btn accent" id="modalAlternate" hidden></button>
+    </div>
+  </div>
+</div>
+
+<script src="script.js" defer></script>
+</body>
+</html>
+
+

@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f5f0e7">
+  <title>Score Graph · Skyjo Scoreboard</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="graph-header">
+    <h1><img class="pip" src="icon-192.png" alt=""> Score Graph</h1>
+    <a class="btn small ghost" href="index.html">← Back to scoreboard</a>
+  </header>
+
+  <main class="graph-main">
+    <section>
+      <div class="card">
+        <div class="head"><h2>Total points by round</h2></div>
+        <div class="body">
+          <p class="graph-summary" id="graphSummary"></p>
+          <div class="graph-legend" id="graphLegend" aria-label="Players"></div>
+          <div class="graph-scroll" id="graphScroll">
+            <svg class="score-graph" id="scoreGraph" viewBox="0 0 800 460" role="img" aria-label="Line graph of each player's total points by round"></svg>
+          </div>
+          <div class="graph-empty" id="graphEmpty" hidden>No committed rounds to graph yet.</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="graph.js" defer></script>
+</body>
+</html>
