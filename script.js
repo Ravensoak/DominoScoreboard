@@ -12,14 +12,14 @@ function loadTarget(){
 
 let state = load() || {
   players: [],     // {id, name}
-  rounds: [],      // [{ scores:{id:n}, raw:{id:n}, closerId, doubledId }]
+  rounds: [],      // [{ scores:{id:n}, raw:{id:n} }]
   picks: {},       // working round: id -> {cards:[v,...]}
   committed: {},   // player id -> whether their current round score is confirmed
-  closerId: null,  // who closed the working round
   groups: [],      // saved rosters for quick re-use: [{id, names:[...]}]
 };
 if(!state.groups) state.groups = [];   // migrate states saved before groups existed
 if(!state.committed) state.committed = {}; // migrate older saved games
+delete state.closerId; // discard the removed first-to-declare setting from saved games
 let playerDrag = null;
 let scorecardUndoStack = [];
 let scorecardRedoStack = [];
@@ -41,7 +41,7 @@ function anyPicks(){
     const p = state.picks[pl.id];
     return p && p.cards && p.cards.length > 0;
   });
-  return anyCards || !!state.closerId;
+  return anyCards;
 }
 function allPlayersCommitted(){
   return state.players.length > 0 && state.players.every(pl=>state.committed[pl.id] === true);
@@ -78,7 +78,7 @@ function render(){
   renderGroups();
   document.getElementById("roundTitle").textContent = "Round " + (state.rounds.length + 1) + " Scorecards";
   updateScorecardHistoryControls();
-  document.querySelector(".commitbar").hidden = !allPlayersCommitted() || !state.players.some(player=>player.id===state.closerId);
+  document.querySelector(".commitbar").hidden = !allPlayersCommitted();
   save();
 }
 
@@ -86,7 +86,6 @@ function scorecardSnapshot(){
   return {
     picks: JSON.parse(JSON.stringify(state.picks)),
     committed: {...state.committed},
-    closerId: state.closerId
   };
 }
 function recordScorecardChange(){
@@ -97,7 +96,6 @@ function recordScorecardChange(){
 function restoreScorecardSnapshot(snapshot){
   state.picks = snapshot.picks;
   state.committed = snapshot.committed;
-  state.closerId = snapshot.closerId;
 }
 function updateScorecardHistoryControls(){
   document.getElementById("scorecardUndo").disabled = scorecardUndoStack.length === 0;
@@ -251,13 +249,11 @@ function renderRoundEntry(){
     const scorePadBtns = [1,2,3,4,6,8].map(v=>
       `<button type="button" class="score-pad-btn ${selected===v?'is-selected':''}" aria-pressed="${selected===v}" onclick="selectScorePad('${pl.id}',${v})">${v}</button>`
     ).join("");
-    const isCloser = state.closerId === pl.id;
     const isCommitted = state.committed[pl.id] === true;
     return `<div class="player-round" data-player-id="${pl.id}">
       <div class="pr-head">
         ${canReorderPlayers ? `<button type="button" class="drag-handle" aria-label="Reorder ${escapeHtml(pl.name)}; use the up and down arrow keys" title="Drag to reorder players">⠿</button>` : ""}
         <div class="nm">${escapeHtml(pl.name)}</div>
-        <button type="button" class="chip outfirst ${isCloser?'on':''}" onclick="toggleCloser('${pl.id}')" title="mark as the first player to declare">First to Declare</button>
       </div>
       <div class="pr-body">
         <div class="score-pad-section">
@@ -376,13 +372,10 @@ function renderHistory(){
   let rows = state.rounds.map((r,ri)=>{
     const cells = state.players.map(pl=>{
       const v = Number(r.scores[pl.id]||0);
-      const crowned = r.closerId === pl.id;
-      const doubled = r.doubledId === pl.id;
-      const ind = (crowned?'👑':'') + (doubled?'<span class="x2">(×2)</span>':'');
-      return `<td class="${doubled?'dbl':''}">
+      return `<td>
         <div class="scorecell">
-          <input type="number" inputmode="numeric" value="${v}" title="${crowned?'closed this round':''}${doubled?' (doubled)':''}"
-          onchange="editScore(${ri},'${pl.id}',this.value)">${ind?`<span class="ind">${ind}</span>`:''}
+          <input type="number" inputmode="numeric" value="${v}"
+          onchange="editScore(${ri},'${pl.id}',this.value)">
         </div>
       </td>`;
     }).join("");
@@ -428,7 +421,6 @@ async function deletePlayer(id){
   state.players = state.players.filter(p=>p.id!==id);
   delete state.picks[id];
   delete state.committed[id];
-  if(state.closerId === id) state.closerId = null;
   state.rounds.forEach(r=>{ delete r.scores[id]; if(r.raw) delete r.raw[id]; });
   render();
 }
@@ -465,40 +457,18 @@ function togglePlayerCommit(id){
   else state.committed[id] = true;
   render();
 }
-function toggleCloser(id){
-  recordScorecardChange();
-  state.closerId = (state.closerId === id) ? null : id;
-  render();
-}
-
 function commitRound(){
   if(state.players.length === 0){ alert("Add players first."); return; }
-  if(!allPlayersCommitted() || !state.players.some(player=>player.id===state.closerId)) return;
+  if(!allPlayersCommitted()) return;
 
   const raw = {};
   state.players.forEach(pl=>{ raw[pl.id] = roundScore(pl.id); });
 
-  const scores = Object.assign({}, raw);
-  let doubledId = null;
-  const closer = state.closerId;
-
-  if(closer && state.players.some(p=>p.id===closer)){
-    const cs = raw[closer];
-    const others = state.players.filter(p=>p.id!==closer).map(p=>raw[p.id]);
-    const strictlyLowest = others.every(o => cs < o);
-    // Skyjo rule: closer doubles unless they alone have the lowest; no penalty if score <= 0
-    if(cs > 0 && !strictlyLowest){
-      scores[closer] = cs * 2;
-      doubledId = closer;
-    }
-  }
-
-  state.rounds.push({ scores, raw, closerId: closer || null, doubledId });
+  state.rounds.push({ scores:raw, raw });
   clearScorecardHistory();
   rememberGroup();  // this roster is now a reusable player group
   state.picks = {};
   state.committed = {};
-  state.closerId = null;
   render();
   window.scrollTo({ top:0, behavior:"smooth" });
 }
@@ -521,7 +491,6 @@ async function useGroup(id){
   state.rounds = [];
   state.picks = {};
   state.committed = {};
-  state.closerId = null;
   render();
   window.scrollTo({ top:0, behavior:"smooth" });
 }
@@ -552,7 +521,6 @@ async function newGame(){
   state.rounds = [];
   state.picks = {};
   state.committed = {};
-  state.closerId = null;
   render();
 }
 
