@@ -1,8 +1,8 @@
 {
   "id": "./index.html",
-  "name": "Skyjo Scoreboard",
-  "short_name": "Skyjo Scoreboard",
-  "description": "Keep track of your Skyjo game scores.",
+  "name": "Domino Scorer",
+  "short_name": "Domino Score",
+  "description": "Keep track of your Domino game scores.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
