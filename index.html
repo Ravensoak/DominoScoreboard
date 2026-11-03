@@ -38,6 +38,18 @@
 
 <div id="winWrap"></div>
 
+<div class="modal-back lowest-domino-backdrop" id="lowestDominoBack" hidden>
+  <section class="modal lowest-domino-dialog" role="dialog" aria-modal="true" aria-labelledby="lowestDominoTitle">
+    <h2 id="lowestDominoTitle">Who has the lowest domino?</h2>
+    <p>Select everyone who qualifies.</p>
+    <div class="lowest-domino-players" id="lowestDominoPlayers" role="group" aria-label="Players with the lowest domino"></div>
+    <div class="modal-btns">
+      <button class="btn" type="button" id="cancelLowestDomino">Cancel</button>
+      <button class="btn primary" type="button" id="confirmLowestDomino">Confirm Round</button>
+    </div>
+  </section>
+</div>
+
 <div class="results-backdrop" id="resultsBackdrop" hidden>
   <section class="results-dialog" role="dialog" aria-modal="true" aria-labelledby="resultsTitle">
     <div class="fireworks" aria-hidden="true">
@@ -64,19 +76,13 @@
   </div>
 </section>
 
-<!-- COMMIT (directly under the totals) -->
-<div class="commitbar">
-  <div class="inner">
-    <button class="btn primary" id="commitBtn">✔ End Round and Update Totals</button>
-  </div>
-</div>
-
 <!-- ROUND ENTRY -->
 <section>
   <div class="card">
     <div class="head scorecards-head">
       <h2 id="roundTitle">Round 1</h2>
       <div class="scorecard-history-controls" role="group" aria-label="Scorecard history">
+        <button class="btn small primary" type="button" id="endRoundBtn" hidden>End Round</button>
         <button class="btn small ghost" type="button" id="scorecardUndo" aria-label="Undo scorecard action" title="Undo" disabled>↶ Undo</button>
         <button class="btn small ghost" type="button" id="scorecardRedo" aria-label="Redo scorecard action" title="Redo" disabled>↷ Redo</button>
       </div>

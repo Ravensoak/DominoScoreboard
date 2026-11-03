@@ -142,6 +142,12 @@ section {
   gap: 7px;
   margin-left: auto;
 }
+.scorecard-history-controls .btn.small {
+  min-height: 26px;
+  padding: 3px 8px;
+  font-size: 11px;
+  line-height: 1.1;
+}
 .scorecard-history-controls .btn:disabled {
   opacity: 0.42;
   cursor: not-allowed;
@@ -184,13 +190,37 @@ section {
   color: #04220f;
 }
 .prow .nm {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-weight: 700;
   font-size: 16px;
   flex: 1 1 auto;
   min-width: 0;
+}
+.player-name-text {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.turn-indicator {
+  flex: 0 0 9px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--turn-color);
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--turn-color) 55%, transparent);
+  animation: turnIndicatorPulse 1.5s ease-out infinite;
+}
+@keyframes turnIndicatorPulse {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--turn-color) 55%, transparent); }
+  70%, 100% { box-shadow: 0 0 0 7px color-mix(in srgb, var(--turn-color) 0%, transparent); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .turn-indicator {
+    animation: none;
+  }
 }
 .prow .tot {
   font-size: 22px;
@@ -249,6 +279,27 @@ section {
   margin-bottom: 12px;
   background: var(--panel2);
 }
+.player-round.is-active {
+  border-color: var(--accent2);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent2) 22%, transparent);
+}
+.player-round.is-locked {
+  opacity: 0.68;
+}
+.round-complete {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 22px 12px;
+  text-align: center;
+}
+.round-complete p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 650;
+}
 .pr-head {
   display: flex;
   align-items: center;
@@ -260,6 +311,18 @@ section {
   font-weight: 700;
   font-size: 15px;
   flex: 1 1 auto;
+}
+.player-order {
+  flex: 0 0 auto;
+  padding: 4px 7px;
+  border: 1px solid currentColor;
+  border-radius: 6px;
+  color: var(--player-text-color, var(--muted));
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  line-height: 1.2;
+  white-space: nowrap;
 }
 .pr-head .rs {
   font-size: 13px;
@@ -546,30 +609,6 @@ section {
   border-color: var(--accent2);
 }
 
-/* Commit bar (inline, sits directly under the standings/totals) */
-.commitbar {
-  max-width: 760px;
-  margin: 0 auto 4px;
-  padding: 0 12px;
-  display: flex;
-  justify-content: center;
-}
-.commitbar .inner {
-  width: 100%;
-  display: flex;
-  gap: 10px;
-}
-.commitbar .btn.primary {
-  flex: 1 1 auto;
-}
-.commitbar .btn.primary:disabled {
-  opacity: 0.45;
-  filter: grayscale(0.35);
-  cursor: not-allowed;
-  box-shadow: none;
-  transform: none;
-}
-
 /* Saved player groups */
 .groups {
   display: flex;
@@ -655,6 +694,70 @@ section {
 .modal .btn.primary {
   font-size: 14px;
   padding: 10px 16px;
+}
+.lowest-domino-backdrop {
+  z-index: 70;
+}
+.lowest-domino-dialog h2 {
+  margin: 0 0 7px;
+  font-size: 18px;
+  color: var(--ink);
+}
+.lowest-domino-dialog > p {
+  margin: 0 0 14px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.lowest-domino-players {
+  display: grid;
+  gap: 7px;
+  max-height: 45vh;
+  overflow-y: auto;
+  margin-bottom: 18px;
+}
+.lowest-domino-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 42px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--panel2);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 650;
+  cursor: pointer;
+}
+.lowest-domino-option input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--accent2);
+}
+.lowest-domino-award {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  color: #9a6b00;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.lowest-domino-award span {
+  padding: 2px 4px;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  font-size: 9px;
+  letter-spacing: 0.04em;
+}
+.lowest-domino-zero {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+body[data-theme="dark"] .lowest-domino-award {
+  color: #f4cc64;
 }
 .winbanner {
   background: linear-gradient(90deg, #063a2a, #085a3e);
@@ -843,15 +946,6 @@ section {
   border-color: #67404a;
   color: #ffc1c2;
 }
-.commitbar {
-  max-width: 840px;
-  margin: 0 auto 6px;
-  padding: 0 16px;
-}
-.commitbar .btn.primary {
-  min-height: 50px;
-  letter-spacing: 0.01em;
-}
 .stand {
   gap: 9px;
 }
@@ -1031,9 +1125,6 @@ section {
   }
   .card .body {
     padding: 12px;
-  }
-  .commitbar {
-    padding: 0 10px;
   }
   .pr-body {
     padding: 11px;
@@ -1464,7 +1555,16 @@ body[data-theme="dark"] .history-graph-link {
   min-width: 0;
 }
 .graph-main {
-  max-width: 960px;
+  width: min(100%, 960px);
+  margin: 20px auto;
+}
+.graph-main > section {
+  max-width: none;
+  margin: 0;
+}
+.graph-scroll {
+  display: flex;
+  justify-content: center;
 }
 .graph-summary {
   margin: 0 0 12px;
@@ -1845,37 +1945,38 @@ body[data-theme="dark"] .instructions-header h1 {
 .score-pad {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-  padding: 10px;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  background: color-mix(in srgb, var(--panel) 72%, transparent);
+  gap: 7px;
+  padding: 8px;
+  border: 1px solid color-mix(in srgb, var(--line) 72%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--panel) 48%, transparent);
 }
 .score-pad-btn {
-  min-height: 50px;
-  border: 1px solid color-mix(in srgb, var(--accent2) 28%, var(--line));
-  border-radius: 11px;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--panel2) 88%, white 12%), var(--panel2));
-  color: var(--ink);
+  min-height: 44px;
+  border: 1px solid color-mix(in srgb, var(--line) 78%, transparent);
+  border-radius: 9px;
+  background: var(--panel);
+  color: color-mix(in srgb, var(--ink) 88%, var(--muted));
   font: inherit;
-  font-size: 18px;
-  font-weight: 800;
+  font-size: 16px;
+  font-weight: 650;
   font-variant-numeric: tabular-nums;
   cursor: pointer;
-  box-shadow: 0 2px 4px #0002, inset 0 1px #ffffff20;
+  box-shadow: 0 1px 2px #0001;
   transition: border-color 0.14s ease, background 0.14s ease, box-shadow 0.14s ease, transform 0.14s ease;
 }
 .score-pad-btn:hover:not(:disabled) {
-  border-color: var(--accent2);
-  box-shadow: 0 4px 10px #0003, inset 0 1px #ffffff28;
-  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--accent2) 62%, var(--line));
+  background: color-mix(in srgb, var(--panel2) 58%, var(--panel));
+  box-shadow: 0 2px 4px #0002;
+  transform: translateY(-1px);
 }
 .score-pad-btn.is-selected,
 .score-pad-btn.is-selected:hover {
-  border-color: var(--accent2);
-  background: var(--accent2);
-  color: #0b1020;
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent2) 32%, transparent), 0 3px 8px #0003;
+  border-color: color-mix(in srgb, var(--accent2) 72%, var(--line));
+  background: color-mix(in srgb, var(--accent2) 22%, var(--panel2));
+  color: var(--ink);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent2) 18%, transparent);
 }
 .score-pad-btn:active:not(:disabled) {
   box-shadow: inset 0 2px 5px #0003;
@@ -2006,27 +2107,6 @@ body[data-theme="dark"] .cbtn:active {
 .pr-foot {
   flex-wrap: wrap;
 }
-.commitbar[hidden] {
-  display: none;
-}
-.score-commit {
-  margin-left: auto;
-  white-space: nowrap;
-}
-.score-commit.is-committed {
-  background: #eaf6ef;
-  border-color: #b9ddc8;
-  color: #28734f;
-}
-.commitbar .btn.primary:disabled {
-  opacity: 0.48;
-  filter: saturate(0.55);
-}
-body[data-theme="dark"] .score-commit.is-committed {
-  background: #1b382d;
-  border-color: #38634f;
-  color: #9be0ba;
-}
 .prow.score-updated .tot {
   animation: standingsTotalUpdate 1100ms ease-in-out;
 }
@@ -2058,9 +2138,6 @@ body[data-theme="dark"] .score-commit.is-committed {
   .pr-foot {
     gap: 7px;
   }
-  .score-commit {
-    margin-left: auto;
-  }
 }
 .player-round {
   background: linear-gradient(145deg, #fff, #f7f9fc);
@@ -2074,14 +2151,14 @@ body[data-theme="dark"] .score-commit.is-committed {
 .pr-head {
   min-height: 58px;
   padding: 12px 16px;
-  background: #f1f5fa;
+  background: var(--player-color, #e5ebf3);
   border-bottom: 1px solid #dce4ef;
 }
 .pr-head .nm {
   font-size: 20px;
   font-weight: 750;
   letter-spacing: -0.02em;
-  color: #223149;
+  color: var(--player-text-color, #223149);
 }
 body[data-theme="dark"] .player-round {
   background: linear-gradient(145deg, #1c2941, #172238);
@@ -2095,7 +2172,7 @@ body[data-theme="dark"] .pr-head {
   border-bottom-color: #3a4a68;
 }
 body[data-theme="dark"] .pr-head .nm {
-  color: #f3f6ff;
+  color: var(--player-text-color, #f3f6ff);
 }
 @media (max-width: 560px) {
   .pr-head {
@@ -2226,7 +2303,7 @@ body[data-theme="dark"] .player-round {
   border-color: #464c55;
 }
 body[data-theme="dark"] .pr-head {
-  background: #30343a;
+  background: var(--player-color, #484d55);
   border-bottom-color: #464c55;
 }
 body[data-theme="dark"] .taglist {

@@ -4,6 +4,19 @@ const TARGET_KEY = "domino-points-to-win-v1";
 let TARGET = loadTarget();
 const STORE_KEY = "skyjo-state-v1";
 const THEME_KEY = "skyjo-theme-v1";
+const PLAYER_COLORS = ["#1677e8", "#f28c28", "#ffff00", "#000000", "#d83b3b", "#249447"];
+const EXTRA_PLAYER_COLORS = ["#8c52d8", "#168f9a", "#a25e32", "#d450a5"];
+
+function playerColor(index){
+  return PLAYER_COLORS[index] || EXTRA_PLAYER_COLORS[(index-PLAYER_COLORS.length)%EXTRA_PLAYER_COLORS.length];
+}
+function playerHeaderTextColor(color){
+  const value = color.slice(1);
+  const red = parseInt(value.slice(0,2),16);
+  const green = parseInt(value.slice(2,4),16);
+  const blue = parseInt(value.slice(4,6),16);
+  return (red*299+green*587+blue*114)/1000 > 145 ? "#17202e" : "#ffffff";
+}
 
 function loadTarget(){
   const saved = Number(localStorage.getItem(TARGET_KEY));
@@ -12,13 +25,43 @@ function loadTarget(){
 
 let state = load() || {
   players: [],     // {id, name}
-  rounds: [],      // [{ scores:{id:n}, raw:{id:n} }]
+  rounds: [],      // [{ scores:{id:n}, raw:{id:n}, entries:{id:[score,...]} }]
   picks: {},       // working round: id -> {cards:[v,...]}
-  committed: {},   // player id -> whether their current round score is confirmed
+  lastScorerId: null,
   groups: [],      // saved rosters for quick re-use: [{id, names:[...]}]
 };
 if(!state.groups) state.groups = [];   // migrate states saved before groups existed
-if(!state.committed) state.committed = {}; // migrate older saved games
+if(!state.picks) state.picks = {};
+if(!Array.isArray(state.passedPlayers)) state.passedPlayers = [];
+if(!Object.prototype.hasOwnProperty.call(state,"lastScorerId")){
+  state.lastScorerId = state.passedPlayers.length
+    ? state.passedPlayers[state.passedPlayers.length - 1]
+    : null;
+}
+delete state.passedPlayers;
+if(!state.lastScorerId && state.rounds.length){
+  const lastRoundTurns = state.rounds[state.rounds.length - 1].turns;
+  if(Array.isArray(lastRoundTurns) && lastRoundTurns.length){
+    state.lastScorerId = lastRoundTurns[lastRoundTurns.length - 1].playerId;
+  }
+}
+if(!Array.isArray(state.currentEntries)){
+  state.currentEntries = [];
+  const maxEntries = Math.max(0,...state.players.map(pl=>state.picks[pl.id]?.cards?.length || 0));
+  for(let entryIndex=0;entryIndex<maxEntries;entryIndex++){
+    state.players.forEach(pl=>{
+      const score = state.picks[pl.id]?.cards?.[entryIndex];
+      if(score !== undefined){
+        state.currentEntries.push({playerId:pl.id,score:Number(score),playerEntryIndex:entryIndex});
+      }
+    });
+  }
+}
+if(typeof state.hasScoredOnce !== "boolean"){
+  state.hasScoredOnce = state.rounds.length > 0 ||
+    Object.values(state.picks).some(picks=>picks && picks.cards && picks.cards.length > 0);
+}
+delete state.committed; // discard the previous per-player confirmation state
 delete state.closerId; // discard the removed first-to-declare setting from saved games
 let playerDrag = null;
 let scorecardUndoStack = [];
@@ -33,7 +76,7 @@ function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(
 function getPicks(id){ if(!state.picks[id]) state.picks[id] = { cards:[] }; return state.picks[id]; }
 function roundScore(id){
   const cards = getPicks(id).cards;
-  return cards.length ? Number(cards[cards.length - 1]) : 0;
+  return cards.reduce((sum,value)=>sum+Number(value||0),0);
 }
 // has the current working round had any input yet?
 function anyPicks(){
@@ -43,10 +86,15 @@ function anyPicks(){
   });
   return anyCards;
 }
-function allPlayersCommitted(){
-  return state.players.length > 0 && state.players.every(pl=>state.committed[pl.id] === true);
+function hasScoreSelected(id){
+  const picks = state.picks[id];
+  return !!(picks && picks.cards && picks.cards.length);
 }
-
+function activeScorecardPlayerId(){
+  if(state.players.length === 0) return null;
+  const lastIndex = state.players.findIndex(pl=>pl.id===state.lastScorerId);
+  return state.players[(lastIndex + 1) % state.players.length].id;
+}
 function cardClass(v){
   if(v < 0) return "neg";
   if(v === 0) return "zero";
@@ -77,15 +125,17 @@ function render(){
   renderHistory();
   renderGroups();
   document.getElementById("roundTitle").textContent = "Round " + (state.rounds.length + 1) + " Scorecards";
+  document.getElementById("endRoundBtn").hidden = !state.hasScoredOnce;
   updateScorecardHistoryControls();
-  document.querySelector(".commitbar").hidden = !allPlayersCommitted();
   save();
 }
 
 function scorecardSnapshot(){
   return {
     picks: JSON.parse(JSON.stringify(state.picks)),
-    committed: {...state.committed},
+    rounds: JSON.parse(JSON.stringify(state.rounds)),
+    currentEntries: JSON.parse(JSON.stringify(state.currentEntries)),
+    lastScorerId: state.lastScorerId,
   };
 }
 function recordScorecardChange(){
@@ -95,7 +145,9 @@ function recordScorecardChange(){
 }
 function restoreScorecardSnapshot(snapshot){
   state.picks = snapshot.picks;
-  state.committed = snapshot.committed;
+  state.rounds = snapshot.rounds;
+  state.currentEntries = snapshot.currentEntries;
+  state.lastScorerId = snapshot.lastScorerId;
 }
 function updateScorecardHistoryControls(){
   document.getElementById("scorecardUndo").disabled = scorecardUndoStack.length === 0;
@@ -188,13 +240,16 @@ function renderStandings(){
     el.innerHTML = '<div class="empty">No players yet — add some at the bottom to start.</div>';
     return;
   }
-  const high = highestTotal();
-  const over = gameOver();
-  const sorted = state.players.slice().sort((a,b)=> totalFor(b.id)-totalFor(a.id)); // highest total first
+  const totalWithCurrentRound = id => totalFor(id) + (hasScoreSelected(id) ? roundScore(id) : 0);
+  const high = Math.max(...state.players.map(pl=>totalWithCurrentRound(pl.id)));
+  const activeTurnId = activeScorecardPlayerId();
+  const sorted = state.players.slice().sort((a,b)=> totalWithCurrentRound(b.id)-totalWithCurrentRound(a.id)); // highest total first
   el.innerHTML = sorted.map((pl,i)=>{
-    const tot = totalFor(pl.id);
+    const playerIndex = state.players.findIndex(player=>player.id===pl.id);
+    const tot = totalWithCurrentRound(pl.id);
     const room = Math.max(0, TARGET - tot);
     const isLead = tot === high;
+    const isTurn = pl.id === activeTurnId;
     const isOut = tot >= TARGET;
     const pct = Math.min(100, tot/TARGET*100);
     const awayHtml = isOut ? '<b>OVER '+TARGET+'</b>'
@@ -202,7 +257,10 @@ function renderStandings(){
     return `<div class="prow ${isOut?'out':''} ${isLead?'lead':''} ${(!isOut&&room<=20&&!isLead)?'danger':''}" data-player-id="${pl.id}">
       <div class="rank">${i+1}</div>
       <div style="flex:1 1 auto; min-width:0;">
-        <div class="nm" onclick="renamePlayer('${pl.id}')" title="tap to rename">${escapeHtml(pl.name)}${isLead?' 🟢':''}</div>
+        <div class="nm" onclick="renamePlayer('${pl.id}')" title="tap to rename">
+          <span class="player-name-text">${escapeHtml(pl.name)}</span>
+          ${isTurn ? `<span class="turn-indicator" style="--turn-color:${playerColor(playerIndex)}" role="img" aria-label="Current turn to score" title="Current turn to score"></span>` : ""}
+        </div>
         <div class="barwrap"><div class="bar" style="width:${pct}%"></div></div>
       </div>
       <div class="tot">${tot}</div>
@@ -234,7 +292,11 @@ function renderStandings(){
 
 function renderRoundEntry(){
   const el = document.getElementById("roundEntry");
-  const canReorderPlayers = state.rounds.length === 0;
+  const activePlayerId = activeScorecardPlayerId();
+  const showAllCards = !state.hasScoredOnce;
+  const visiblePlayers = showAllCards
+    ? state.players
+    : state.players.filter(pl=>pl.id===activePlayerId);
   const previousOrder = new Map([...el.querySelectorAll(".player-round")].map((card,index)=>[
     card.dataset.playerId,
     {top:card.getBoundingClientRect().top,index}
@@ -243,28 +305,31 @@ function renderRoundEntry(){
     el.innerHTML = '<div class="empty">Add players to begin scoring a round.</div>';
     return;
   }
-  el.innerHTML = state.players.map(pl=>{
-    const picks = getPicks(pl.id).cards;
-    const selected = picks.length ? Number(picks[picks.length - 1]) : null;
+  if(visiblePlayers.length === 0){
+    el.innerHTML = '<div class="round-complete"><p>All players have entered their scores.</p></div>';
+    return;
+  }
+  el.innerHTML = visiblePlayers.map(pl=>{
+    const index = state.players.indexOf(pl);
+    const headerColor = playerColor(index);
+    const isActive = pl.id === activePlayerId;
     const scorePadBtns = [1,2,3,4,6,8].map(v=>
-      `<button type="button" class="score-pad-btn ${selected===v?'is-selected':''}" aria-pressed="${selected===v}" onclick="selectScorePad('${pl.id}',${v})">${v}</button>`
+      `<button type="button" class="score-pad-btn" aria-pressed="false" ${isActive?'':'disabled'} onclick="selectScorePad('${pl.id}',${v})">${v}</button>`
     ).join("");
-    const isCommitted = state.committed[pl.id] === true;
-    return `<div class="player-round" data-player-id="${pl.id}">
-      <div class="pr-head">
-        ${canReorderPlayers ? `<button type="button" class="drag-handle" aria-label="Reorder ${escapeHtml(pl.name)}; use the up and down arrow keys" title="Drag to reorder players">⠿</button>` : ""}
+    return `<div class="player-round ${isActive?'is-active':'is-locked'}" data-player-id="${pl.id}" aria-disabled="${!isActive}">
+      <div class="pr-head" style="--player-color:${headerColor};--player-text-color:${playerHeaderTextColor(headerColor)}">
+        ${showAllCards ? `<button type="button" class="drag-handle" aria-label="Reorder ${escapeHtml(pl.name)}; use the up and down arrow keys" title="Drag to reorder players">⠿</button>` : ""}
         <div class="nm">${escapeHtml(pl.name)}</div>
+        <span class="player-order">PLAYER ${String(index+1).padStart(2,"0")}</span>
       </div>
       <div class="pr-body">
         <div class="score-pad-section">
           <div class="score-pad-label">Score pads</div>
-          <div class="score-pad"><button type="button" class="score-pad-btn score-pad-zero ${selected===0?'is-selected':''}" aria-pressed="${selected===0}" onclick="selectScorePad('${pl.id}',0)">0</button>${scorePadBtns}</div>
+          <div class="score-pad"><button type="button" class="score-pad-btn score-pad-zero" aria-pressed="false" ${isActive?'':'disabled'} onclick="selectScorePad('${pl.id}',0)">0</button>${scorePadBtns}</div>
         </div>
       </div>
       <div class="pr-foot">
-        <button class="btn small accent" onclick="undoCard('${pl.id}')">↶ Undo</button>
-        <button class="btn small danger" onclick="clearPicks('${pl.id}')">Clear</button>
-        <button class="btn small score-commit ${isCommitted?'is-committed':''}" onclick="togglePlayerCommit('${pl.id}')" aria-pressed="${isCommitted}">${isCommitted?'Scores Committed ✓':'Commit Scores'}</button>
+        <span class="hint">${isActive?'Select one score':'Waiting for previous player'}</span>
       </div>
     </div>`;
   }).join("");
@@ -367,25 +432,75 @@ function renderHistory(){
   const t = document.getElementById("history");
   if(state.players.length === 0){ t.innerHTML = ""; return; }
   let head = '<thead><tr><th>R</th>' +
-    state.players.map(pl=>`<th>${escapeHtml(pl.name)}</th>`).join("") +
+    state.players.map((pl,index)=>{
+      const color = playerColor(index);
+      return `<th style="background-color:${color};color:${playerHeaderTextColor(color)}">${escapeHtml(pl.name)}</th>`;
+    }).join("") +
     '<th></th></tr></thead>';
-  let rows = state.rounds.map((r,ri)=>{
+  const historyRows = [];
+  const playerCount = state.players.length;
+  function addTurnRows(turns,roundIndex,kind,hasBonus=false){
+    for(let start=0;start<turns.length;start+=playerCount){
+      const end = Math.min(start+playerCount,turns.length);
+      historyRows.push({
+        roundIndex,
+        kind,
+        entries:turns.slice(start,end).map((entry,offset)=>({
+          ...entry,
+          entryIndex:start+offset
+        })),
+        hasBonus,
+        isLastCycle:end===turns.length,
+        isComplete:end-start===playerCount
+      });
+    }
+  }
+  state.rounds.forEach((round,roundIndex)=>{
+    if(Array.isArray(round.turns) && round.turns.length){
+      addTurnRows(round.turns,roundIndex,"cycle",(round.lowestDominoIds||[]).length>0);
+    } else {
+      const hasBonus = (round.lowestDominoIds||[]).length>0;
+      historyRows.push({roundIndex,kind:"round",scores:hasBonus?(round.raw||round.scores):round.scores,hasBonus});
+    }
+    if((round.lowestDominoIds||[]).length){
+      historyRows.push({roundIndex,kind:"lowest-domino",playerIds:round.lowestDominoIds});
+    }
+  });
+  if(state.currentEntries.length){
+    addTurnRows(state.currentEntries,state.rounds.length,"current-cycle");
+  }
+  let rows = historyRows.map(row=>{
     const cells = state.players.map(pl=>{
-      const v = Number(r.scores[pl.id]||0);
-      return `<td>
-        <div class="scorecell">
-          <input type="number" inputmode="numeric" value="${v}"
-          onchange="editScore(${ri},'${pl.id}',this.value)">
-        </div>
-      </td>`;
+      if(row.kind === "cycle" || row.kind === "current-cycle"){
+        const entry = row.entries.find(item=>item.playerId===pl.id);
+        if(!entry) return "<td></td>";
+        const onchange = row.kind === "current-cycle"
+          ? `editCurrentScoreEntry(${entry.entryIndex},this.value)`
+          : `editScoreEntry(${row.roundIndex},${entry.entryIndex},this.value)`;
+        const title = entry.autoZero ? ' title="No score entered; recorded as 0"' : "";
+        return `<td><div class="scorecell"><input type="number" inputmode="numeric" value="${Number(entry.score||0)}"${title} onchange="${onchange}"></div></td>`;
+      }
+      if(row.kind === "lowest-domino"){
+        return row.playerIds.includes(pl.id)
+          ? '<td><div class="lowest-domino-award"><b>+1</b><span title="Lowest domino">LD</span></div></td>'
+          : '<td><div class="lowest-domino-zero">0</div></td>';
+      }
+      const value = Number(row.scores?.[pl.id]||0);
+      return `<td><div class="scorecell"><input type="number" inputmode="numeric" value="${value}" onchange="editScore(${row.roundIndex},'${pl.id}',this.value)"></div></td>`;
     }).join("");
-    return `<tr><td class="rndlbl">${ri+1}</td>${cells}<td><span class="delr" onclick="deleteRound(${ri})" title="delete round">✕</span></td></tr>`;
+    const deleteRoundHtml = row.kind === "current-cycle" ||
+      (row.kind === "cycle" && (!row.isLastCycle || row.hasBonus)) ||
+      (row.kind === "round" && row.hasBonus)
+      ? ""
+      : `<span class="delr" onclick="deleteRound(${row.roundIndex})" title="delete round">✕</span>`;
+    const rowClass = (row.kind === "current-cycle" || row.kind === "cycle") && !row.isComplete ? "score-row-incomplete" : "";
+    return `<tr class="${rowClass}"><td class="rndlbl">${row.roundIndex+1}</td>${cells}<td>${deleteRoundHtml}</td></tr>`;
   }).join("");
-  if(state.rounds.length === 0){
-    rows = `<tr><td class="rndlbl">—</td><td colspan="${state.players.length+1}" class="empty" style="padding:10px;">No rounds committed yet.</td></tr>`;
+  if(historyRows.length === 0){
+    rows = `<tr><td class="rndlbl">—</td><td colspan="${state.players.length+1}" class="empty" style="padding:10px;">No scores entered yet.</td></tr>`;
   }
   let foot = '<tfoot><tr><td class="rndlbl">Σ</td>' +
-    state.players.map(pl=>`<td>${totalFor(pl.id)}</td>`).join("") +
+    state.players.map(pl=>`<td>${totalFor(pl.id)+roundScore(pl.id)}</td>`).join("") +
     '<td></td></tr></tfoot>';
   t.innerHTML = head + '<tbody>'+rows+'</tbody>' + foot;
 }
@@ -420,8 +535,15 @@ async function deletePlayer(id){
   clearScorecardHistory();
   state.players = state.players.filter(p=>p.id!==id);
   delete state.picks[id];
-  delete state.committed[id];
-  state.rounds.forEach(r=>{ delete r.scores[id]; if(r.raw) delete r.raw[id]; });
+  state.currentEntries = state.currentEntries.filter(entry=>entry.playerId!==id);
+  if(state.lastScorerId===id) state.lastScorerId = null;
+  state.rounds.forEach(r=>{
+    delete r.scores[id];
+    if(r.raw) delete r.raw[id];
+    if(r.entries) delete r.entries[id];
+    if(r.turns) r.turns = r.turns.filter(entry=>entry.playerId!==id);
+    if(r.lowestDominoIds) r.lowestDominoIds = r.lowestDominoIds.filter(playerId=>playerId!==id);
+  });
   render();
 }
 function renamePlayer(id){
@@ -430,45 +552,46 @@ function renamePlayer(id){
   const nn = prompt("Rename player:", pl.name);
   if(nn && nn.trim()){ pl.name = nn.trim().slice(0,18); render(); }
 }
-function invalidateCommit(id){ delete state.committed[id]; }
 function selectScorePad(id,v){
+  if(id !== activeScorecardPlayerId()) return;
   recordScorecardChange();
-  getPicks(id).cards = [Number(v)];
-  invalidateCommit(id);
+  state.hasScoredOnce = true;
+  const playerEntryIndex = getPicks(id).cards.length;
+  const score = Number(v);
+  getPicks(id).cards.push(score);
+  state.currentEntries.push({playerId:id,score,playerEntryIndex});
+  state.lastScorerId = id;
   render();
 }
-function undoCard(id){
-  if(getPicks(id).cards.length === 0) return;
-  recordScorecardChange();
-  getPicks(id).cards = [];
-  invalidateCommit(id);
-  render();
-}
-function clearPicks(id){
-  if(getPicks(id).cards.length === 0 && state.committed[id] !== true) return;
-  recordScorecardChange();
-  state.picks[id] = {cards:[]};
-  invalidateCommit(id);
-  render();
-}
-function togglePlayerCommit(id){
-  recordScorecardChange();
-  if(state.committed[id]) delete state.committed[id];
-  else state.committed[id] = true;
-  render();
-}
-function commitRound(){
+function commitRound(lowestDominoIds=[]){
   if(state.players.length === 0){ alert("Add players first."); return; }
-  if(!allPlayersCommitted()) return;
 
   const raw = {};
   state.players.forEach(pl=>{ raw[pl.id] = roundScore(pl.id); });
 
-  state.rounds.push({ scores:raw, raw });
-  clearScorecardHistory();
+  recordScorecardChange();
+  const turns = state.currentEntries.map(entry=>({...entry}));
+  const playerCount = state.players.length;
+  const remainder = turns.length % playerCount;
+  const missingCount = remainder === 0 ? (turns.length === 0 ? playerCount : 0) : playerCount - remainder;
+  const nextPlayerIndex = Math.max(0,state.players.findIndex(pl=>pl.id===activeScorecardPlayerId()));
+  for(let offset=0;offset<missingCount;offset++){
+    const player = state.players[(nextPlayerIndex+offset)%playerCount];
+    turns.push({
+      playerId:player.id,
+      score:0,
+      playerEntryIndex:getPicks(player.id).cards.length,
+      autoZero:true
+    });
+  }
+  const scores = {...raw};
+  const validLowestDominoIds = [...new Set(lowestDominoIds)]
+    .filter(id=>state.players.some(pl=>pl.id===id));
+  validLowestDominoIds.forEach(id=>{ scores[id] = Number(scores[id]||0) + 1; });
+  state.rounds.push({ scores, raw, turns, lowestDominoIds:validLowestDominoIds });
   rememberGroup();  // this roster is now a reusable player group
   state.picks = {};
-  state.committed = {};
+  state.currentEntries = [];
   render();
   window.scrollTo({ top:0, behavior:"smooth" });
 }
@@ -490,7 +613,9 @@ async function useGroup(id){
   clearScorecardHistory();
   state.rounds = [];
   state.picks = {};
-  state.committed = {};
+  state.currentEntries = [];
+  state.lastScorerId = null;
+  state.hasScoredOnce = false;
   render();
   window.scrollTo({ top:0, behavior:"smooth" });
 }
@@ -501,11 +626,40 @@ function deleteGroup(id){
 
 function editScore(roundIdx, id, val){
   const v = Math.round(Number(val)||0);
-  state.rounds[roundIdx].scores[id] = v;
+  clearScorecardHistory();
+  const hasBonus = state.rounds[roundIdx].lowestDominoIds?.includes(id);
+  state.rounds[roundIdx].scores[id] = v + (hasBonus?1:0);
+  if(state.rounds[roundIdx].raw) state.rounds[roundIdx].raw[id] = v;
+  if(state.rounds[roundIdx].entries) state.rounds[roundIdx].entries[id] = [v];
+  render();
+}
+function editScoreEntry(roundIdx,entryIdx,val){
+  const round = state.rounds[roundIdx];
+  const entry = round?.turns?.[entryIdx];
+  if(!entry) return;
+  const score = Math.round(Number(val)||0);
+  clearScorecardHistory();
+  entry.score = score;
+  const baseScore = round.turns
+    .filter(turn=>turn.playerId===entry.playerId)
+    .reduce((sum,turn)=>sum+Number(turn.score||0),0);
+  round.raw[entry.playerId] = baseScore;
+  round.scores[entry.playerId] = baseScore + (round.lowestDominoIds?.includes(entry.playerId)?1:0);
+  render();
+}
+function editCurrentScoreEntry(entryIdx,val){
+  const entry = state.currentEntries[entryIdx];
+  if(!entry) return;
+  const score = Math.round(Number(val)||0);
+  clearScorecardHistory();
+  entry.score = score;
+  const playerPicks = getPicks(entry.playerId).cards;
+  playerPicks[entry.playerEntryIndex] = score;
   render();
 }
 async function deleteRound(idx){
   if(!(await confirmModal("Delete round "+(idx+1)+"?", "Delete"))) return;
+  clearScorecardHistory();
   state.rounds.splice(idx,1);
   render();
 }
@@ -520,7 +674,9 @@ async function newGame(){
   if(choice === "alternate") state.players = [];
   state.rounds = [];
   state.picks = {};
-  state.committed = {};
+  state.currentEntries = [];
+  state.lastScorerId = null;
+  state.hasScoredOnce = false;
   render();
 }
 
@@ -549,6 +705,30 @@ function confirmModal(message, okLabel, alternateLabel){
   });
 }
 
+function openLowestDominoDialog(){
+  if(state.players.length === 0) return;
+  const back = document.getElementById("lowestDominoBack");
+  const choices = document.getElementById("lowestDominoPlayers");
+  choices.innerHTML = state.players.map(pl=>
+    `<label class="lowest-domino-option"><input type="checkbox" value="${escapeHtml(pl.id)}"><span>${escapeHtml(pl.name)}</span></label>`
+  ).join("");
+  back.hidden = false;
+  back.classList.add("show");
+  choices.querySelector("input")?.focus();
+}
+function closeLowestDominoDialog(){
+  const back = document.getElementById("lowestDominoBack");
+  back.classList.remove("show");
+  back.hidden = true;
+  document.getElementById("endRoundBtn").focus();
+}
+function confirmLowestDominoRound(){
+  const selectedIds = [...document.querySelectorAll("#lowestDominoPlayers input:checked")]
+    .map(input=>input.value);
+  closeLowestDominoDialog();
+  commitRound(selectedIds);
+}
+
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
 /* ---------- appearance ---------- */
@@ -567,11 +747,16 @@ function setTheme(theme){
 /* ---------- wire up ---------- */
 document.getElementById("addPlayerBtn").onclick = addPlayer;
 document.getElementById("newPlayerName").addEventListener("keydown", e=>{ if(e.key==="Enter") addPlayer(); });
-document.getElementById("commitBtn").onclick = commitRound;
 document.getElementById("newGameBtn").onclick = newGame;
 document.getElementById("returnToScoreboard").onclick = returnToScoreboard;
 document.getElementById("scorecardUndo").onclick = undoScorecardAction;
 document.getElementById("scorecardRedo").onclick = redoScorecardAction;
+document.getElementById("endRoundBtn").onclick = openLowestDominoDialog;
+document.getElementById("cancelLowestDomino").onclick = closeLowestDominoDialog;
+document.getElementById("confirmLowestDomino").onclick = confirmLowestDominoRound;
+document.getElementById("lowestDominoBack").addEventListener("click",event=>{
+  if(event.target.id === "lowestDominoBack") closeLowestDominoDialog();
+});
 const targetLbl = document.getElementById("targetLbl");
 const pointsToWinInput = document.getElementById("pointsToWinInput");
 function updateTargetDisplay(){
