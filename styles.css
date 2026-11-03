@@ -502,12 +502,6 @@ section {
 .htable .scorecell .ind .x2 {
   color: var(--bad);
 }
-.htable .scorecell .ind .half-ind {
-  display: inline-block;
-  margin-left: 2px;
-  color: #a04ba5;
-  font-size: 11px;
-}
 .htable tfoot td {
   background: var(--panel2);
   font-weight: 800;
@@ -1308,6 +1302,33 @@ header h1 .pip {
   letter-spacing: 0.09em;
   text-transform: uppercase;
 }
+.settings-number {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 15px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e6ebf2;
+  color: #52637a;
+  font-size: 13px;
+  font-weight: 650;
+}
+.settings-number input {
+  box-sizing: border-box;
+  width: 82px;
+  padding: 7px 8px;
+  border: 1px solid #dce4ef;
+  border-radius: 8px;
+  background: #f6f8fc;
+  color: inherit;
+  font: inherit;
+  text-align: right;
+}
+.settings-number input:focus {
+  outline: 2px solid #1682a2;
+  outline-offset: 1px;
+}
 .theme-options {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1751,6 +1772,15 @@ body[data-theme="dark"] .settings-panel {
 body[data-theme="dark"] .settings-label {
   color: #c3cee3;
 }
+body[data-theme="dark"] .settings-number {
+  border-bottom-color: #34415d;
+  color: #c3cee3;
+}
+body[data-theme="dark"] .settings-number input {
+  background: #202c45;
+  border-color: #3a4865;
+  color: #eef3fb;
+}
 body[data-theme="dark"] .theme-choice {
   background: #202c45;
   border-color: #3a4865;
@@ -1790,6 +1820,61 @@ body[data-theme="dark"] .instructions-header h1 {
 /* Refined score card controls; preserve the existing value band colors. */
 .grid-cards {
   gap: 8px;
+}
+.score-pad-section {
+  margin-top: 16px;
+}
+.score-pad-label {
+  margin-bottom: 9px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.score-pad {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--panel) 72%, transparent);
+}
+.score-pad-btn {
+  min-height: 50px;
+  border: 1px solid color-mix(in srgb, var(--accent2) 28%, var(--line));
+  border-radius: 11px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--panel2) 88%, white 12%), var(--panel2));
+  color: var(--ink);
+  font: inherit;
+  font-size: 18px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  box-shadow: 0 2px 4px #0002, inset 0 1px #ffffff20;
+  transition: border-color 0.14s ease, background 0.14s ease, box-shadow 0.14s ease, transform 0.14s ease;
+}
+.score-pad-btn:hover:not(:disabled) {
+  border-color: var(--accent2);
+  box-shadow: 0 4px 10px #0003, inset 0 1px #ffffff28;
+  transform: translateY(-2px);
+}
+.score-pad-btn:active:not(:disabled) {
+  box-shadow: inset 0 2px 5px #0003;
+  transform: translateY(0) scale(0.98);
+}
+.score-pad-btn:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--accent2) 70%, transparent);
+  outline-offset: 2px;
+}
+.score-pad-btn:disabled {
+  opacity: 0.4;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+.score-pad-zero {
+  grid-column: 1 / -1;
 }
 .cbtn {
   height: 48px;

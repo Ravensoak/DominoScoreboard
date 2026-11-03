@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Skyjo Scoreboard</title>
+<title>Domino Scorer - Fives and Threes</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
@@ -14,21 +14,21 @@
 </head>
 <body>
 <header>
-  <h1><img class="pip" src="icon-192.png" alt=""> Skyjo Scoreboard</h1>
-  <div class="target">Upper limit is <b id="targetLbl">100</b> - lowest score wins</div>
+  <h1><img class="pip" src="icon-192.png" alt=""> Domino Scorer - Fives and Threes</h1>
+  <div class="target">Points to win <b id="targetLbl">120</b></div>
   <button class="btn small ghost" id="newGameBtn">New Game</button>
   <details class="settings-menu" id="settingsMenu">
     <summary class="btn small ghost" aria-label="Open settings" title="Settings">⚙</summary>
     <div class="settings-panel">
+      <label class="settings-number" for="pointsToWinInput">
+        <span>Points to Win</span>
+        <input id="pointsToWinInput" type="number" min="1" step="1" inputmode="numeric" aria-label="Points to Win">
+      </label>
       <div class="settings-label">Appearance</div>
       <div class="theme-options" role="group" aria-label="Choose a theme">
         <button class="theme-choice" type="button" data-theme-choice="light">☀ Light</button>
         <button class="theme-choice" type="button" data-theme-choice="dark">☾ Dark</button>
       </div>
-      <label class="settings-toggle" for="halveAt100Toggle">
-        <span>100 Exact - Halve Score</span>
-        <input id="halveAt100Toggle" type="checkbox" role="switch" aria-label="100 Exact - Halve Score">
-      </label>
       <a class="settings-link" href="instructions.html" id="instructionsLink">How to use the scorer <span aria-hidden="true">↗</span></a>
       <button class="settings-link settings-refresh" type="button" id="refreshApp"><span aria-hidden="true">↻</span> Refresh App</button>
       <button class="settings-close" type="button" id="settingsClose">Close</button>

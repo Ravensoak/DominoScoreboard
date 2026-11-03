@@ -1,10 +1,14 @@
 ﻿"use strict";
-const TARGET = 100;
-const CARDS = [-2,-1,0,1,2,3,4,5,6,7,8,9,10,11,12];
+const DEFAULT_TARGET = 120;
+const TARGET_KEY = "domino-points-to-win-v1";
+let TARGET = loadTarget();
 const STORE_KEY = "skyjo-state-v1";
 const THEME_KEY = "skyjo-theme-v1";
-const HALVE_AT_100_KEY = "skyjo-halve-at-100-v1";
-let halveAt100 = localStorage.getItem(HALVE_AT_100_KEY) === "true";
+
+function loadTarget(){
+  const saved = Number(localStorage.getItem(TARGET_KEY));
+  return Number.isSafeInteger(saved) && saved > 0 ? saved : DEFAULT_TARGET;
+}
 
 let state = load() || {
   players: [],     // {id, name}
@@ -51,7 +55,6 @@ function totalFor(id){
   let t = 0;
   state.rounds.forEach(r => {
     t += Number(r.scores[id]||0);
-    if(r.halvedIds && r.halvedIds.includes(id)) t /= 2;
   });
   return t;
 }
@@ -207,12 +210,9 @@ function renderRoundEntry(){
     const p = getPicks(pl.id);
     const rs = roundScore(pl.id);
     const cnt = cardCount(pl.id);
-    const counts = {};
-    p.cards.forEach(v => counts[v] = (counts[v]||0)+1);
-    const cardBtns = CARDS.map(v=>{
-      const c = counts[v]||0;
-      return `<button class="cbtn ${cardClass(v)}" onclick="addCard('${pl.id}',${v})" ${cnt >= 12?'disabled title="Maximum 12 cards selected"':''}>${v}${c?`<span class="cnt">${c}</span>`:''}</button>`;
-    }).join("");
+    const scorePadBtns = [1,2,3,4,6,8].map(v=>
+      `<button type="button" class="score-pad-btn" onclick="addCard('${pl.id}',${v})" ${cnt >= 12?'disabled title="Maximum 12 scores selected"':''}>${v}</button>`
+    ).join("");
     const tags = p.cards.length
       ? p.cards.map((v,i)=>`<span class="tag ${cardClass(v)}" onclick="removeCardAt('${pl.id}',${i})" title="tap to remove">${v}<span class="rm">✕</span></span>`).join("")
         + `<span class="sum">= <b>${rs}</b></span>`
@@ -226,7 +226,10 @@ function renderRoundEntry(){
         <button type="button" class="chip outfirst ${isCloser?'on':''}" onclick="toggleCloser('${pl.id}')" title="mark as the first player to declare">First to Declare</button>
       </div>
       <div class="pr-body">
-        <div class="grid-cards">${cardBtns}</div>
+        <div class="score-pad-section">
+          <div class="score-pad-label">Score pads</div>
+          <div class="score-pad"><button type="button" class="score-pad-btn score-pad-zero" onclick="addCard('${pl.id}',0)" ${cnt >= 12?'disabled title="Maximum 12 scores selected"':''}>0</button>${scorePadBtns}</div>
+        </div>
         ${p.cards.length ? `<div class="taglist">${tags}</div>` : ""}
       </div>
       <div class="pr-foot">
@@ -343,12 +346,10 @@ function renderHistory(){
       const v = Number(r.scores[pl.id]||0);
       const crowned = r.closerId === pl.id;
       const doubled = r.doubledId === pl.id;
-      const halved = r.halvedIds && r.halvedIds.includes(pl.id);
-      const ind = (crowned?'👑':'') + (doubled?'<span class="x2">(×2)</span>':'') +
-        (halved?'<span class="half-ind" title="Total halved after reaching 100">½</span>':'');
+      const ind = (crowned?'👑':'') + (doubled?'<span class="x2">(×2)</span>':'');
       return `<td class="${doubled?'dbl':''}">
         <div class="scorecell">
-          <input type="number" inputmode="numeric" value="${v}" title="${crowned?'closed this round':''}${doubled?' (doubled)':''}${halved?' (total halved after reaching 100)':''}"
+          <input type="number" inputmode="numeric" value="${v}" title="${crowned?'closed this round':''}${doubled?' (doubled)':''}"
           onchange="editScore(${ri},'${pl.id}',this.value)">${ind?`<span class="ind">${ind}</span>`:''}
         </div>
       </td>`;
@@ -433,7 +434,6 @@ function commitRound(){
 
   const scores = Object.assign({}, raw);
   let doubledId = null;
-  const halvedIds = [];
   const closer = state.closerId;
 
   if(closer && state.players.some(p=>p.id===closer)){
@@ -447,13 +447,7 @@ function commitRound(){
     }
   }
 
-  if(halveAt100){
-    state.players.forEach(pl=>{
-      if(totalFor(pl.id) + Number(scores[pl.id]||0) === TARGET) halvedIds.push(pl.id);
-    });
-  }
-
-  state.rounds.push({ scores, raw, closerId: closer || null, doubledId, halvedIds });
+  state.rounds.push({ scores, raw, closerId: closer || null, doubledId });
   rememberGroup();  // this roster is now a reusable player group
   state.picks = {};
   state.committed = {};
@@ -559,7 +553,25 @@ document.getElementById("newPlayerName").addEventListener("keydown", e=>{ if(e.k
 document.getElementById("commitBtn").onclick = commitRound;
 document.getElementById("newGameBtn").onclick = newGame;
 document.getElementById("returnToScoreboard").onclick = returnToScoreboard;
-document.getElementById("targetLbl").textContent = TARGET;
+const targetLbl = document.getElementById("targetLbl");
+const pointsToWinInput = document.getElementById("pointsToWinInput");
+function updateTargetDisplay(){
+  targetLbl.textContent = TARGET;
+  pointsToWinInput.value = TARGET;
+  document.querySelector(".target").firstChild.textContent = "Points to win ";
+}
+updateTargetDisplay();
+pointsToWinInput.addEventListener("change", ()=>{
+  const newTarget = Number(pointsToWinInput.value);
+  if(!Number.isSafeInteger(newTarget) || newTarget < 1){
+    pointsToWinInput.value = TARGET;
+    return;
+  }
+  TARGET = newTarget;
+  localStorage.setItem(TARGET_KEY, String(TARGET));
+  updateTargetDisplay();
+  render();
+});
 const roundEntryEl = document.getElementById("roundEntry");
 roundEntryEl.addEventListener("pointerdown", handlePlayerPointerDown);
 roundEntryEl.addEventListener("pointermove", handlePlayerPointerMove);
@@ -569,12 +581,6 @@ roundEntryEl.addEventListener("keydown", handlePlayerHandleKeydown);
 setTheme(localStorage.getItem(THEME_KEY) || "light");
 document.querySelectorAll("[data-theme-choice]").forEach(button=>{
   button.addEventListener("click", ()=>setTheme(button.dataset.themeChoice));
-});
-const halveAt100Toggle = document.getElementById("halveAt100Toggle");
-halveAt100Toggle.checked = halveAt100;
-halveAt100Toggle.addEventListener("change", ()=>{
-  halveAt100 = halveAt100Toggle.checked;
-  localStorage.setItem(HALVE_AT_100_KEY, String(halveAt100));
 });
 document.getElementById("instructionsLink").addEventListener("click", ()=>{
   document.getElementById("settingsMenu").open = false;
