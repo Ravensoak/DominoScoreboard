@@ -21,6 +21,8 @@ let state = load() || {
 if(!state.groups) state.groups = [];   // migrate states saved before groups existed
 if(!state.committed) state.committed = {}; // migrate older saved games
 let playerDrag = null;
+let scorecardUndoStack = [];
+let scorecardRedoStack = [];
 
 /* ---------- persistence ---------- */
 function save(){ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
@@ -29,8 +31,10 @@ function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(
 
 /* ---------- model helpers ---------- */
 function getPicks(id){ if(!state.picks[id]) state.picks[id] = { cards:[] }; return state.picks[id]; }
-function roundScore(id){ return getPicks(id).cards.reduce((a,b)=>a+b,0); }
-function cardCount(id){ return getPicks(id).cards.length; }
+function roundScore(id){
+  const cards = getPicks(id).cards;
+  return cards.length ? Number(cards[cards.length - 1]) : 0;
+}
 // has the current working round had any input yet?
 function anyPicks(){
   const anyCards = state.players.some(pl=>{
@@ -58,10 +62,6 @@ function totalFor(id){
   });
   return t;
 }
-function lowestTotal(){
-  if(state.players.length === 0) return 0;
-  return Math.min(...state.players.map(pl => totalFor(pl.id)));
-}
 function highestTotal(){
   if(state.players.length === 0) return 0;
   return Math.max(...state.players.map(pl => totalFor(pl.id)));
@@ -77,8 +77,47 @@ function render(){
   renderHistory();
   renderGroups();
   document.getElementById("roundTitle").textContent = "Round " + (state.rounds.length + 1) + " Scorecards";
+  updateScorecardHistoryControls();
   document.querySelector(".commitbar").hidden = !allPlayersCommitted() || !state.players.some(player=>player.id===state.closerId);
   save();
+}
+
+function scorecardSnapshot(){
+  return {
+    picks: JSON.parse(JSON.stringify(state.picks)),
+    committed: {...state.committed},
+    closerId: state.closerId
+  };
+}
+function recordScorecardChange(){
+  scorecardUndoStack.push(scorecardSnapshot());
+  if(scorecardUndoStack.length > 100) scorecardUndoStack.shift();
+  scorecardRedoStack = [];
+}
+function restoreScorecardSnapshot(snapshot){
+  state.picks = snapshot.picks;
+  state.committed = snapshot.committed;
+  state.closerId = snapshot.closerId;
+}
+function updateScorecardHistoryControls(){
+  document.getElementById("scorecardUndo").disabled = scorecardUndoStack.length === 0;
+  document.getElementById("scorecardRedo").disabled = scorecardRedoStack.length === 0;
+}
+function undoScorecardAction(){
+  if(scorecardUndoStack.length === 0) return;
+  scorecardRedoStack.push(scorecardSnapshot());
+  restoreScorecardSnapshot(scorecardUndoStack.pop());
+  render();
+}
+function redoScorecardAction(){
+  if(scorecardRedoStack.length === 0) return;
+  scorecardUndoStack.push(scorecardSnapshot());
+  restoreScorecardSnapshot(scorecardRedoStack.pop());
+  render();
+}
+function clearScorecardHistory(){
+  scorecardUndoStack = [];
+  scorecardRedoStack = [];
 }
 
 function ordinal(place){
@@ -95,7 +134,7 @@ function renderGameResults(){
     return;
   }
   const results = state.players.map(player=>({player,total:totalFor(player.id)}))
-    .sort((a,b)=>a.total-b.total || a.player.name.localeCompare(b.player.name));
+    .sort((a,b)=>b.total-a.total || a.player.name.localeCompare(b.player.name));
   const resultKey = results.map(result=>`${result.player.id}:${result.total}`).join("|");
   if(state.resultsDismissedFor === resultKey) return;
 
@@ -122,7 +161,7 @@ function renderGameResults(){
 
 function returnToScoreboard(){
   const results = state.players.map(player=>({player,total:totalFor(player.id)}))
-    .sort((a,b)=>a.total-b.total || a.player.name.localeCompare(b.player.name));
+    .sort((a,b)=>b.total-a.total || a.player.name.localeCompare(b.player.name));
   state.resultsDismissedFor = results.map(result=>`${result.player.id}:${result.total}`).join("|");
   document.getElementById("resultsBackdrop").hidden = true;
   save();
@@ -132,12 +171,12 @@ function returnToScoreboard(){
 function renderWin(){
   const wrap = document.getElementById("winWrap");
   if(!gameOver() || state.players.length === 0){ wrap.innerHTML = ""; return; }
-  const low = lowestTotal();
-  const winnersList = state.players.filter(p => totalFor(p.id) === low);
+  const high = highestTotal();
+  const winnersList = state.players.filter(p => totalFor(p.id) === high);
   const names = winnersList.map(p=>p.name).join(" & ");
   const txt = winnersList.length>1
-    ? "🏆 Tie at " + low + "! " + names + " win"
-    : "🏆 " + names + " wins with " + low + "!";
+    ? "🏆 Tie at " + high + "! " + names + " win"
+    : "🏆 " + names + " wins with " + high + "!";
   wrap.innerHTML = '<section><div class="winbanner">'+escapeHtml(txt)+'</div></section>';
 }
 
@@ -151,13 +190,13 @@ function renderStandings(){
     el.innerHTML = '<div class="empty">No players yet — add some at the bottom to start.</div>';
     return;
   }
-  const low = lowestTotal();
+  const high = highestTotal();
   const over = gameOver();
   const sorted = state.players.slice().sort((a,b)=> totalFor(b.id)-totalFor(a.id)); // highest total first
   el.innerHTML = sorted.map((pl,i)=>{
     const tot = totalFor(pl.id);
     const room = Math.max(0, TARGET - tot);
-    const isLead = tot === low;
+    const isLead = tot === high;
     const isOut = tot >= TARGET;
     const pct = Math.min(100, tot/TARGET*100);
     const awayHtml = isOut ? '<b>OVER '+TARGET+'</b>'
@@ -207,16 +246,11 @@ function renderRoundEntry(){
     return;
   }
   el.innerHTML = state.players.map(pl=>{
-    const p = getPicks(pl.id);
-    const rs = roundScore(pl.id);
-    const cnt = cardCount(pl.id);
+    const picks = getPicks(pl.id).cards;
+    const selected = picks.length ? Number(picks[picks.length - 1]) : null;
     const scorePadBtns = [1,2,3,4,6,8].map(v=>
-      `<button type="button" class="score-pad-btn" onclick="addCard('${pl.id}',${v})" ${cnt >= 12?'disabled title="Maximum 12 scores selected"':''}>${v}</button>`
+      `<button type="button" class="score-pad-btn ${selected===v?'is-selected':''}" aria-pressed="${selected===v}" onclick="selectScorePad('${pl.id}',${v})">${v}</button>`
     ).join("");
-    const tags = p.cards.length
-      ? p.cards.map((v,i)=>`<span class="tag ${cardClass(v)}" onclick="removeCardAt('${pl.id}',${i})" title="tap to remove">${v}<span class="rm">✕</span></span>`).join("")
-        + `<span class="sum">= <b>${rs}</b></span>`
-      : "";
     const isCloser = state.closerId === pl.id;
     const isCommitted = state.committed[pl.id] === true;
     return `<div class="player-round" data-player-id="${pl.id}">
@@ -228,14 +262,12 @@ function renderRoundEntry(){
       <div class="pr-body">
         <div class="score-pad-section">
           <div class="score-pad-label">Score pads</div>
-          <div class="score-pad"><button type="button" class="score-pad-btn score-pad-zero" onclick="addCard('${pl.id}',0)" ${cnt >= 12?'disabled title="Maximum 12 scores selected"':''}>0</button>${scorePadBtns}</div>
+          <div class="score-pad"><button type="button" class="score-pad-btn score-pad-zero ${selected===0?'is-selected':''}" aria-pressed="${selected===0}" onclick="selectScorePad('${pl.id}',0)">0</button>${scorePadBtns}</div>
         </div>
-        ${p.cards.length ? `<div class="taglist">${tags}</div>` : ""}
       </div>
       <div class="pr-foot">
         <button class="btn small accent" onclick="undoCard('${pl.id}')">↶ Undo</button>
         <button class="btn small danger" onclick="clearPicks('${pl.id}')">Clear</button>
-        <span class="hint">${cnt} card${cnt===1?'':'s'}${cnt>=12?' · maximum reached':''}</span>
         <button class="btn small score-commit ${isCommitted?'is-committed':''}" onclick="togglePlayerCommit('${pl.id}')" aria-pressed="${isCommitted}">${isCommitted?'Scores Committed ✓':'Commit Scores'}</button>
       </div>
     </div>`;
@@ -383,6 +415,7 @@ function addPlayer(){
   const inp = document.getElementById("newPlayerName");
   const name = inp.value.trim();
   if(!name) return;
+  clearScorecardHistory();
   state.players.push({ id:uid(), name });
   inp.value = "";
   render();
@@ -391,6 +424,7 @@ async function deletePlayer(id){
   const pl = state.players.find(p=>p.id===id);
   if(!pl) return;
   if(!(await confirmModal("Remove "+pl.name+"? Their scores in all rounds will be dropped.", "Remove"))) return;
+  clearScorecardHistory();
   state.players = state.players.filter(p=>p.id!==id);
   delete state.picks[id];
   delete state.committed[id];
@@ -405,22 +439,34 @@ function renamePlayer(id){
   if(nn && nn.trim()){ pl.name = nn.trim().slice(0,18); render(); }
 }
 function invalidateCommit(id){ delete state.committed[id]; }
-function addCard(id,v){
-  const cards = getPicks(id).cards;
-  if(cards.length >= 12) return;
-  cards.push(v);
+function selectScorePad(id,v){
+  recordScorecardChange();
+  getPicks(id).cards = [Number(v)];
   invalidateCommit(id);
   render();
 }
-function undoCard(id){ getPicks(id).cards.pop(); invalidateCommit(id); render(); }
-function removeCardAt(id,i){ getPicks(id).cards.splice(i,1); invalidateCommit(id); render(); }
-function clearPicks(id){ state.picks[id] = {cards:[]}; invalidateCommit(id); render(); }
+function undoCard(id){
+  if(getPicks(id).cards.length === 0) return;
+  recordScorecardChange();
+  getPicks(id).cards = [];
+  invalidateCommit(id);
+  render();
+}
+function clearPicks(id){
+  if(getPicks(id).cards.length === 0 && state.committed[id] !== true) return;
+  recordScorecardChange();
+  state.picks[id] = {cards:[]};
+  invalidateCommit(id);
+  render();
+}
 function togglePlayerCommit(id){
+  recordScorecardChange();
   if(state.committed[id]) delete state.committed[id];
   else state.committed[id] = true;
   render();
 }
 function toggleCloser(id){
+  recordScorecardChange();
   state.closerId = (state.closerId === id) ? null : id;
   render();
 }
@@ -448,6 +494,7 @@ function commitRound(){
   }
 
   state.rounds.push({ scores, raw, closerId: closer || null, doubledId });
+  clearScorecardHistory();
   rememberGroup();  // this roster is now a reusable player group
   state.picks = {};
   state.committed = {};
@@ -470,6 +517,7 @@ async function useGroup(id){
   if((state.rounds.length > 0 || anyPicks()) &&
      !(await confirmModal("Start a new game with " + g.names.join(", ") + "? This clears the current game.", "Start"))) return;
   state.players = g.names.map(n=>({ id:uid(), name:n }));
+  clearScorecardHistory();
   state.rounds = [];
   state.picks = {};
   state.committed = {};
@@ -499,6 +547,7 @@ async function newGame(){
     "New Players"
   );
   if(!choice) return;
+  clearScorecardHistory();
   if(choice === "alternate") state.players = [];
   state.rounds = [];
   state.picks = {};
@@ -553,6 +602,8 @@ document.getElementById("newPlayerName").addEventListener("keydown", e=>{ if(e.k
 document.getElementById("commitBtn").onclick = commitRound;
 document.getElementById("newGameBtn").onclick = newGame;
 document.getElementById("returnToScoreboard").onclick = returnToScoreboard;
+document.getElementById("scorecardUndo").onclick = undoScorecardAction;
+document.getElementById("scorecardRedo").onclick = redoScorecardAction;
 const targetLbl = document.getElementById("targetLbl");
 const pointsToWinInput = document.getElementById("pointsToWinInput");
 function updateTargetDisplay(){
