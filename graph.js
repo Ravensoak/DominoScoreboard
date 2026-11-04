@@ -174,38 +174,18 @@ function drawGraph() {
     const points = values.map(point => `${x(point.round)},${y(point.total)}`).join(" ");
     svg.append(svgElement("polyline", { points, stroke: color, class: "graph-line" }));
     values.slice(1).forEach(point => {
-      const marker = point.autoZero
-        ? svgElement("circle", { cx:x(point.round), cy:y(point.total), r:6, fill:color, stroke:"#fff", "stroke-width":2, class:"graph-point graph-point-auto-zero" })
-        : point.lowestDomino
-        ? svgElement("rect", { x:x(point.round)-4, y:y(point.total)-4, width:8, height:8, transform:`rotate(45 ${x(point.round)} ${y(point.total)})`, fill:color, class:"graph-point" })
-        : point.scoreDelta === 0
-          ? svgElement("circle", { cx:x(point.round), cy:y(point.total), r:5, fill:"var(--panel)", stroke:color, "stroke-width":2, class:"graph-point graph-point-zero" })
-          : svgElement("circle", { cx:x(point.round), cy:y(point.total), r:4, fill:color, class:"graph-point" });
-      if(point.scoreDelta === 0 && !point.autoZero){
-        marker.style.stroke = color;
-        marker.style.strokeWidth = "2px";
-      }
+      const marker = svgElement("circle", {
+        cx:x(point.round),
+        cy:y(point.total),
+        r:3,
+        fill:color,
+        class:"graph-point"
+      });
       const change = point.lowestDomino
         ? "lowest domino bonus +1"
-        : point.autoZero
-          ? "no score entered; recorded as 0"
-          : `score ${point.scoreDelta >= 0 ? "+" : ""}${formatValue(point.scoreDelta)}`;
+        : `score ${point.scoreDelta >= 0 ? "+" : ""}${formatValue(point.scoreDelta)}`;
       marker.append(svgElement("title", {}, `Player ${index + 1} (${player.name}), round ${point.roundNumber}: ${change}; total ${formatValue(point.total)}`));
       svg.append(marker);
-      if(point.autoZero){
-        const label = svgElement("text", {
-          x:x(point.round),
-          y:y(point.total)-9,
-          "text-anchor":"middle",
-          class:"graph-zero-label"
-        }, "0");
-        label.style.fill = color;
-        label.style.stroke = "#fff";
-        label.style.strokeWidth = "3px";
-        label.style.paintOrder = "stroke";
-        label.style.fontWeight = "800";
-        svg.append(label);
-      }
     });
   });
 }

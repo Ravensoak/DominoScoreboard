@@ -64,6 +64,7 @@ if(typeof state.hasScoredOnce !== "boolean"){
 delete state.committed; // discard the previous per-player confirmation state
 delete state.closerId; // discard the removed first-to-declare setting from saved games
 let playerDrag = null;
+let animateNextPlayerTurn = false;
 let scorecardUndoStack = [];
 let scorecardRedoStack = [];
 
@@ -254,7 +255,7 @@ function renderStandings(){
     const pct = Math.min(100, tot/TARGET*100);
     const awayHtml = isOut ? '<b>OVER '+TARGET+'</b>'
                            : '<b>'+room+'</b><br>to '+TARGET;
-    return `<div class="prow ${isOut?'out':''} ${isLead?'lead':''} ${(!isOut&&room<=20&&!isLead)?'danger':''}" data-player-id="${pl.id}">
+    return `<div class="prow ${isOut?'out':''} ${isLead?'lead':''} ${(!isOut&&room<=20&&!isLead)?'danger':''}" data-player-id="${pl.id}" style="--player-color:${playerColor(playerIndex)}">
       <div class="rank">${i+1}</div>
       <div style="flex:1 1 auto; min-width:0;">
         <div class="nm" onclick="renamePlayer('${pl.id}')" title="tap to rename">
@@ -302,10 +303,12 @@ function renderRoundEntry(){
     {top:card.getBoundingClientRect().top,index}
   ]));
   if(state.players.length === 0){
+    animateNextPlayerTurn = false;
     el.innerHTML = '<div class="empty">Add players to begin scoring a round.</div>';
     return;
   }
   if(visiblePlayers.length === 0){
+    animateNextPlayerTurn = false;
     el.innerHTML = '<div class="round-complete"><p>All players have entered their scores.</p></div>';
     return;
   }
@@ -314,9 +317,9 @@ function renderRoundEntry(){
     const headerColor = playerColor(index);
     const isActive = pl.id === activePlayerId;
     const scorePadBtns = [1,2,3,4,6,8].map(v=>
-      `<button type="button" class="score-pad-btn" aria-pressed="false" ${isActive?'':'disabled'} onclick="selectScorePad('${pl.id}',${v})">${v}</button>`
+      `<button type="button" class="score-pad-btn" aria-pressed="false" ${isActive?'':'disabled'} onclick="selectScorePad('${pl.id}',${v},this)">${v}</button>`
     ).join("");
-    return `<div class="player-round ${isActive?'is-active':'is-locked'}" data-player-id="${pl.id}" aria-disabled="${!isActive}">
+    return `<div class="player-round ${isActive?'is-active':'is-locked'}${isActive && animateNextPlayerTurn?' turn-enter':''}" data-player-id="${pl.id}" aria-disabled="${!isActive}">
       <div class="pr-head" style="--player-color:${headerColor};--player-text-color:${playerHeaderTextColor(headerColor)}">
         ${showAllCards ? `<button type="button" class="drag-handle" aria-label="Reorder ${escapeHtml(pl.name)}; use the up and down arrow keys" title="Drag to reorder players">⠿</button>` : ""}
         <div class="nm">${escapeHtml(pl.name)}</div>
@@ -325,7 +328,7 @@ function renderRoundEntry(){
       <div class="pr-body">
         <div class="score-pad-section">
           <div class="score-pad-label">Score pads</div>
-          <div class="score-pad"><button type="button" class="score-pad-btn score-pad-zero" aria-pressed="false" ${isActive?'':'disabled'} onclick="selectScorePad('${pl.id}',0)">0</button>${scorePadBtns}</div>
+          <div class="score-pad"><button type="button" class="score-pad-btn score-pad-zero" aria-pressed="false" ${isActive?'':'disabled'} onclick="selectScorePad('${pl.id}',0,this)">0</button>${scorePadBtns}</div>
         </div>
       </div>
       <div class="pr-foot">
@@ -333,6 +336,7 @@ function renderRoundEntry(){
       </div>
     </div>`;
   }).join("");
+  animateNextPlayerTurn = false;
 
   [...el.querySelectorAll(".player-round")].forEach((card,index)=>{
     const previous = previousOrder.get(card.dataset.playerId);
@@ -436,7 +440,7 @@ function renderHistory(){
       const color = playerColor(index);
       return `<th style="background-color:${color};color:${playerHeaderTextColor(color)}">${escapeHtml(pl.name)}</th>`;
     }).join("") +
-    '<th></th></tr></thead>';
+    '</tr></thead>';
   const historyRows = [];
   const playerCount = state.players.length;
   function addTurnRows(turns,roundIndex,kind,hasBonus=false){
@@ -474,11 +478,8 @@ function renderHistory(){
       if(row.kind === "cycle" || row.kind === "current-cycle"){
         const entry = row.entries.find(item=>item.playerId===pl.id);
         if(!entry) return "<td></td>";
-        const onchange = row.kind === "current-cycle"
-          ? `editCurrentScoreEntry(${entry.entryIndex},this.value)`
-          : `editScoreEntry(${row.roundIndex},${entry.entryIndex},this.value)`;
         const title = entry.autoZero ? ' title="No score entered; recorded as 0"' : "";
-        return `<td><div class="scorecell"><input type="number" inputmode="numeric" value="${Number(entry.score||0)}"${title} onchange="${onchange}"></div></td>`;
+        return `<td><div class="scorecell"${title}>${Number(entry.score||0)}</div></td>`;
       }
       if(row.kind === "lowest-domino"){
         return row.playerIds.includes(pl.id)
@@ -486,22 +487,17 @@ function renderHistory(){
           : '<td><div class="lowest-domino-zero">0</div></td>';
       }
       const value = Number(row.scores?.[pl.id]||0);
-      return `<td><div class="scorecell"><input type="number" inputmode="numeric" value="${value}" onchange="editScore(${row.roundIndex},'${pl.id}',this.value)"></div></td>`;
+      return `<td><div class="scorecell">${value}</div></td>`;
     }).join("");
-    const deleteRoundHtml = row.kind === "current-cycle" ||
-      (row.kind === "cycle" && (!row.isLastCycle || row.hasBonus)) ||
-      (row.kind === "round" && row.hasBonus)
-      ? ""
-      : `<span class="delr" onclick="deleteRound(${row.roundIndex})" title="delete round">✕</span>`;
     const rowClass = (row.kind === "current-cycle" || row.kind === "cycle") && !row.isComplete ? "score-row-incomplete" : "";
-    return `<tr class="${rowClass}"><td class="rndlbl">${row.roundIndex+1}</td>${cells}<td>${deleteRoundHtml}</td></tr>`;
+    return `<tr class="${rowClass}"><td class="rndlbl">${row.roundIndex+1}</td>${cells}</tr>`;
   }).join("");
   if(historyRows.length === 0){
-    rows = `<tr><td class="rndlbl">—</td><td colspan="${state.players.length+1}" class="empty" style="padding:10px;">No scores entered yet.</td></tr>`;
+    rows = `<tr><td class="rndlbl">—</td><td colspan="${state.players.length}" class="empty" style="padding:10px;">No scores entered yet.</td></tr>`;
   }
   let foot = '<tfoot><tr><td class="rndlbl">Σ</td>' +
     state.players.map(pl=>`<td>${totalFor(pl.id)+roundScore(pl.id)}</td>`).join("") +
-    '<td></td></tr></tfoot>';
+    '</tr></tfoot>';
   t.innerHTML = head + '<tbody>'+rows+'</tbody>' + foot;
 }
 
@@ -552,8 +548,32 @@ function renamePlayer(id){
   const nn = prompt("Rename player:", pl.name);
   if(nn && nn.trim()){ pl.name = nn.trim().slice(0,18); render(); }
 }
-function selectScorePad(id,v){
+function animateScoreToLeaderboard(score, sourceRect, playerId){
+  if(!sourceRect || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const total = document.querySelector(`.prow[data-player-id="${playerId}"] .tot`);
+  if(!total) return;
+  const targetRect = total.getBoundingClientRect();
+  const flyer = document.createElement("div");
+  flyer.className = "score-flight";
+  flyer.setAttribute("aria-hidden","true");
+  flyer.textContent = String(score);
+  flyer.style.left = `${sourceRect.left}px`;
+  flyer.style.top = `${sourceRect.top}px`;
+  flyer.style.width = `${sourceRect.width}px`;
+  flyer.style.height = `${sourceRect.height}px`;
+  document.body.appendChild(flyer);
+  const dx = targetRect.left + targetRect.width/2 - (sourceRect.left + sourceRect.width/2);
+  const dy = targetRect.top + targetRect.height/2 - (sourceRect.top + sourceRect.height/2);
+  const animation = flyer.animate([
+    { transform:"translate(0,0) scale(1)", opacity:1 },
+    { transform:`translate(${dx}px,${dy}px) scale(.55)`, opacity:.15 }
+  ], { duration:650, easing:"cubic-bezier(.2,.72,.22,1)" });
+  animation.onfinish = ()=>flyer.remove();
+}
+function selectScorePad(id,v,sourceButton){
   if(id !== activeScorecardPlayerId()) return;
+  const sourceRect = sourceButton?.getBoundingClientRect();
+  sourceButton?.blur();
   recordScorecardChange();
   state.hasScoredOnce = true;
   const playerEntryIndex = getPicks(id).cards.length;
@@ -561,7 +581,14 @@ function selectScorePad(id,v){
   getPicks(id).cards.push(score);
   state.currentEntries.push({playerId:id,score,playerEntryIndex});
   state.lastScorerId = id;
+  animateNextPlayerTurn = true;
+  if(totalFor(id) + roundScore(id) >= TARGET){
+    commitRound();
+    animateScoreToLeaderboard(score,sourceRect,id);
+    return;
+  }
   render();
+  animateScoreToLeaderboard(score,sourceRect,id);
 }
 function commitRound(lowestDominoIds=[]){
   if(state.players.length === 0){ alert("Add players first."); return; }
@@ -584,6 +611,7 @@ function commitRound(lowestDominoIds=[]){
       autoZero:true
     });
   }
+  if(turns.length) state.lastScorerId = turns[turns.length-1].playerId;
   const scores = {...raw};
   const validLowestDominoIds = [...new Set(lowestDominoIds)]
     .filter(id=>state.players.some(pl=>pl.id===id));
@@ -712,6 +740,7 @@ function openLowestDominoDialog(){
   choices.innerHTML = state.players.map(pl=>
     `<label class="lowest-domino-option"><input type="checkbox" value="${escapeHtml(pl.id)}"><span>${escapeHtml(pl.name)}</span></label>`
   ).join("");
+  choices.querySelectorAll('input[type="checkbox"]').forEach(input=>{ input.checked = false; });
   back.hidden = false;
   back.classList.add("show");
   choices.querySelector("input")?.focus();
