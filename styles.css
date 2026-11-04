@@ -194,7 +194,7 @@ section {
   align-items: center;
   gap: 8px;
   font-weight: 700;
-  font-size: 16px;
+  font-size: 20px;
   flex: 1 1 auto;
   min-width: 0;
 }
@@ -223,7 +223,7 @@ section {
   }
 }
 .prow .tot {
-  font-size: 22px;
+  font-size: 28px;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
 }
@@ -807,13 +807,13 @@ body[data-theme="dark"] .lowest-domino-award {
   }
   .cbtn {
     height: 54px;
-    font-size: 19px;
+    font-size: 21px;
   }
   .prow .tot {
     font-size: 24px;
   }
   .prow .nm {
-    font-size: 17px;
+    font-size: 19px;
   }
   .prow .x {
     font-size: 22px;
@@ -986,7 +986,7 @@ section {
   background: #301c27;
 }
 .prow .tot {
-  font-size: 24px;
+  font-size: 32px;
   letter-spacing: -0.03em;
 }
 .player-round {
@@ -2584,11 +2584,23 @@ body[data-theme="dark"] .cbtn .cnt {
 .result-row.winner .result-score {
   color: #21845f;
 }
+.results-actions {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+}
+.results-actions .btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 48px;
+}
 .results-return {
   position: relative;
   z-index: 1;
-  width: 100%;
-  min-height: 48px;
 }
 .fireworks {
   position: absolute;

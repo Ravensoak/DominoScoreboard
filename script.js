@@ -28,6 +28,7 @@ let state = load() || {
   rounds: [],      // [{ scores:{id:n}, raw:{id:n}, entries:{id:[score,...]} }]
   picks: {},       // working round: id -> {cards:[v,...]}
   lastScorerId: null,
+  roundStarterId: null,
   groups: [],      // saved rosters for quick re-use: [{id, names:[...]}]
 };
 if(!state.groups) state.groups = [];   // migrate states saved before groups existed
@@ -55,6 +56,16 @@ if(!Array.isArray(state.currentEntries)){
         state.currentEntries.push({playerId:pl.id,score:Number(score),playerEntryIndex:entryIndex});
       }
     });
+  }
+}
+if(!Object.prototype.hasOwnProperty.call(state,"roundStarterId")){
+  state.roundStarterId = null;
+  const lastRound = state.rounds[state.rounds.length - 1];
+  if(!state.currentEntries.length && Array.isArray(lastRound?.turns) && lastRound.turns.length){
+    const previousStarterIndex = state.players.findIndex(pl=>pl.id===lastRound.turns[0].playerId);
+    if(previousStarterIndex >= 0){
+      state.roundStarterId = state.players[(previousStarterIndex + 1) % state.players.length].id;
+    }
   }
 }
 if(typeof state.hasScoredOnce !== "boolean"){
@@ -93,6 +104,9 @@ function hasScoreSelected(id){
 }
 function activeScorecardPlayerId(){
   if(state.players.length === 0) return null;
+  if(!state.currentEntries.length && state.players.some(pl=>pl.id===state.roundStarterId)){
+    return state.roundStarterId;
+  }
   const lastIndex = state.players.findIndex(pl=>pl.id===state.lastScorerId);
   return state.players[(lastIndex + 1) % state.players.length].id;
 }
@@ -137,6 +151,7 @@ function scorecardSnapshot(){
     rounds: JSON.parse(JSON.stringify(state.rounds)),
     currentEntries: JSON.parse(JSON.stringify(state.currentEntries)),
     lastScorerId: state.lastScorerId,
+    roundStarterId: state.roundStarterId,
   };
 }
 function recordScorecardChange(){
@@ -149,6 +164,7 @@ function restoreScorecardSnapshot(snapshot){
   state.rounds = snapshot.rounds;
   state.currentEntries = snapshot.currentEntries;
   state.lastScorerId = snapshot.lastScorerId;
+  state.roundStarterId = snapshot.roundStarterId;
 }
 function updateScorecardHistoryControls(){
   document.getElementById("scorecardUndo").disabled = scorecardUndoStack.length === 0;
@@ -529,10 +545,14 @@ async function deletePlayer(id){
   if(!pl) return;
   if(!(await confirmModal("Remove "+pl.name+"? Their scores in all rounds will be dropped.", "Remove"))) return;
   clearScorecardHistory();
+  const removedIndex = state.players.findIndex(player=>player.id===id);
   state.players = state.players.filter(p=>p.id!==id);
   delete state.picks[id];
   state.currentEntries = state.currentEntries.filter(entry=>entry.playerId!==id);
   if(state.lastScorerId===id) state.lastScorerId = null;
+  if(state.roundStarterId===id){
+    state.roundStarterId = state.players.length ? state.players[Math.min(removedIndex,state.players.length-1)].id : null;
+  }
   state.rounds.forEach(r=>{
     delete r.scores[id];
     if(r.raw) delete r.raw[id];
@@ -593,6 +613,8 @@ function selectScorePad(id,v,sourceButton){
 function commitRound(lowestDominoIds=[]){
   if(state.players.length === 0){ alert("Add players first."); return; }
 
+  const roundStarterId = state.currentEntries[0]?.playerId || activeScorecardPlayerId();
+
   const raw = {};
   state.players.forEach(pl=>{ raw[pl.id] = roundScore(pl.id); });
 
@@ -617,6 +639,8 @@ function commitRound(lowestDominoIds=[]){
     .filter(id=>state.players.some(pl=>pl.id===id));
   validLowestDominoIds.forEach(id=>{ scores[id] = Number(scores[id]||0) + 1; });
   state.rounds.push({ scores, raw, turns, lowestDominoIds:validLowestDominoIds });
+  const starterIndex = state.players.findIndex(pl=>pl.id===roundStarterId);
+  state.roundStarterId = state.players[(Math.max(0,starterIndex)+1)%playerCount].id;
   rememberGroup();  // this roster is now a reusable player group
   state.picks = {};
   state.currentEntries = [];
@@ -643,6 +667,7 @@ async function useGroup(id){
   state.picks = {};
   state.currentEntries = [];
   state.lastScorerId = null;
+  state.roundStarterId = null;
   state.hasScoredOnce = false;
   render();
   window.scrollTo({ top:0, behavior:"smooth" });
@@ -704,6 +729,7 @@ async function newGame(){
   state.picks = {};
   state.currentEntries = [];
   state.lastScorerId = null;
+  state.roundStarterId = null;
   state.hasScoredOnce = false;
   render();
 }

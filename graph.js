@@ -94,7 +94,20 @@ function drawGraph() {
       if (Math.abs(total - expectedTotal) > 0.0001) {
         const scoreDelta = expectedTotal - total;
         total = expectedTotal;
-        values.push({ round: roundIndex + 1, roundNumber: roundIndex + 1, total, scoreDelta });
+        values.push({ round: roundIndex + 1, roundNumber: roundIndex + 1, total, scoreDelta, roundEnd:true });
+      } else {
+        const lastPoint = values[values.length - 1];
+        if (lastPoint.round < roundIndex + 1) {
+          values.push({
+            round: roundIndex + 1,
+            roundNumber: roundIndex + 1,
+            total: expectedTotal,
+            scoreDelta: expectedTotal - startTotal,
+            roundEnd:true
+          });
+        } else {
+          lastPoint.roundEnd = true;
+        }
       }
     });
     currentEntries.forEach((entry, entryIndex) => {
