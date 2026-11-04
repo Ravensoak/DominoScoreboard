@@ -1,7 +1,7 @@
 {
   "id": "./index.html",
   "name": "Domino Scorer",
-  "short_name": "Domino Score",
+  "short_name": "Domino Scorer",
   "description": "Keep track of your Domino game scores.",
   "start_url": "./index.html",
   "scope": "./",
