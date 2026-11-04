@@ -76,6 +76,10 @@ delete state.committed; // discard the previous per-player confirmation state
 delete state.closerId; // discard the removed first-to-declare setting from saved games
 let playerDrag = null;
 let animateNextPlayerTurn = false;
+let deferPlayerTurnAnimation = false;
+let deferLeaderboardSort = false;
+let pendingLeaderboardSort = [];
+let deferLeaderboardScoreFor = null;
 let scorecardUndoStack = [];
 let scorecardRedoStack = [];
 
@@ -136,7 +140,7 @@ function render(){
   renderWin();
   renderGameResults();
   renderStandings();
-  renderRoundEntry();
+  if(!deferPlayerTurnAnimation) renderRoundEntry();
   renderHistory();
   renderGroups();
   document.getElementById("roundTitle").textContent = "Round " + (state.rounds.length + 1) + " Scorecards";
@@ -276,7 +280,7 @@ function renderStandings(){
       <div style="flex:1 1 auto; min-width:0;">
         <div class="nm" onclick="renamePlayer('${pl.id}')" title="tap to rename">
           <span class="player-name-text">${escapeHtml(pl.name)}</span>
-          ${isTurn ? `<span class="turn-indicator" style="--turn-color:${playerColor(playerIndex)}" role="img" aria-label="Current turn to score" title="Current turn to score"></span>` : ""}
+          ${isTurn && !deferPlayerTurnAnimation ? `<span class="turn-indicator" style="--turn-color:${playerColor(playerIndex)}" role="img" aria-label="Current turn to score" title="Current turn to score"></span>` : ""}
         </div>
         <div class="barwrap"><div class="bar" style="width:${pct}%"></div></div>
       </div>
@@ -293,17 +297,22 @@ function renderStandings(){
     const afterTop = row.getBoundingClientRect().top;
     const scoreChanged = before.total !== Number(row.querySelector(".tot").textContent);
     const moved = Math.abs(before.top - afterTop) > 1;
-    if(moved){
+    if(moved && deferLeaderboardSort){
+      row.style.transform = `translateY(${before.top-afterTop}px)`;
+      row.style.transition = "none";
+      pendingLeaderboardSort.push({playerId:row.dataset.playerId, offset:before.top-afterTop});
+    } else if(moved){
       row.style.transform = `translateY(${before.top-afterTop}px)`;
       row.style.transition = "none";
     }
-    if(scoreChanged) row.classList.add("score-updated");
-    if(moved) requestAnimationFrame(()=>{
+    const deferScore = scoreChanged && row.dataset.playerId === deferLeaderboardScoreFor;
+    if(scoreChanged && !deferScore) row.classList.add("score-updated");
+    if(moved && !deferLeaderboardSort) requestAnimationFrame(()=>{
       row.style.transition = "transform 1100ms cubic-bezier(.2,.72,.22,1)";
       row.style.transform = "translateY(0)";
       window.setTimeout(()=>{ row.style.transition=""; row.style.transform=""; },1150);
     });
-    if(scoreChanged) window.setTimeout(()=>row.classList.remove("score-updated"),1150);
+    if(scoreChanged && !deferScore) window.setTimeout(()=>row.classList.remove("score-updated"),1150);
   });
 }
 
@@ -335,7 +344,7 @@ function renderRoundEntry(){
     const scorePadBtns = [1,2,3,4,6,8].map(v=>
       `<button type="button" class="score-pad-btn" aria-pressed="false" ${isActive?'':'disabled'} onclick="selectScorePad('${pl.id}',${v},this)">${v}</button>`
     ).join("");
-    return `<div class="player-round ${isActive?'is-active':'is-locked'}${isActive && animateNextPlayerTurn?' turn-enter':''}" data-player-id="${pl.id}" aria-disabled="${!isActive}">
+    return `<div class="player-round ${isActive?'is-active':'is-locked'}${isActive && animateNextPlayerTurn && !deferPlayerTurnAnimation?' turn-enter':''}" data-player-id="${pl.id}" aria-disabled="${!isActive}">
       <div class="pr-head" style="--player-color:${headerColor};--player-text-color:${playerHeaderTextColor(headerColor)}">
         ${showAllCards ? `<button type="button" class="drag-handle" aria-label="Reorder ${escapeHtml(pl.name)}; use the up and down arrow keys" title="Drag to reorder players">⠿</button>` : ""}
         <div class="nm">${escapeHtml(pl.name)}</div>
@@ -568,10 +577,44 @@ function renamePlayer(id){
   const nn = prompt("Rename player:", pl.name);
   if(nn && nn.trim()){ pl.name = nn.trim().slice(0,18); render(); }
 }
-function animateScoreToLeaderboard(score, sourceRect, playerId){
-  if(!sourceRect || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+function animateScoreToLeaderboard(score, sourceRect, playerId, previousTotal, nextTotal){
+  const finishSort = ()=>{
+    deferLeaderboardSort = false;
+    deferLeaderboardScoreFor = null;
+    const scoreRow = document.querySelector(`.prow[data-player-id="${playerId}"]`);
+    const scoreTotal = scoreRow?.querySelector(".tot");
+    if(scoreTotal){
+      scoreTotal.textContent = String(nextTotal);
+      scoreRow.classList.remove("score-updated");
+      void scoreTotal.offsetWidth;
+      scoreRow.classList.add("score-updated");
+      window.setTimeout(()=>scoreRow.classList.remove("score-updated"),1150);
+    }
+    pendingLeaderboardSort.forEach(({playerId:id,offset})=>{
+      const row = document.querySelector(`.prow[data-player-id="${id}"]`);
+      if(!row) return;
+      row.style.transform = `translateY(${offset}px)`;
+      row.style.transition = "none";
+      requestAnimationFrame(()=>{
+        row.style.transition = "transform 1100ms cubic-bezier(.2,.72,.22,1)";
+        row.style.transform = "translateY(0)";
+        window.setTimeout(()=>{ row.style.transition=""; row.style.transform=""; },1150);
+      });
+    });
+    pendingLeaderboardSort = [];
+    if(deferPlayerTurnAnimation){
+      const waitForLeaderboard = sourceRect && !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      window.setTimeout(()=>{
+        deferPlayerTurnAnimation = false;
+        renderStandings();
+        renderRoundEntry();
+      },waitForLeaderboard ? 1150 : 0);
+    }
+  };
+  if(!sourceRect || window.matchMedia("(prefers-reduced-motion: reduce)").matches){ finishSort(); return; }
   const total = document.querySelector(`.prow[data-player-id="${playerId}"] .tot`);
-  if(!total) return;
+  if(!total){ finishSort(); return; }
+  total.textContent = String(previousTotal);
   const targetRect = total.getBoundingClientRect();
   const flyer = document.createElement("div");
   flyer.className = "score-flight";
@@ -588,12 +631,23 @@ function animateScoreToLeaderboard(score, sourceRect, playerId){
     { transform:"translate(0,0) scale(1)", opacity:1 },
     { transform:`translate(${dx}px,${dy}px) scale(.55)`, opacity:.15 }
   ], { duration:650, easing:"cubic-bezier(.2,.72,.22,1)" });
-  animation.onfinish = ()=>flyer.remove();
+  const scorepadAnimations = [...document.querySelectorAll(".player-round.turn-enter")]
+    .flatMap(playerRound=>playerRound.getAnimations());
+  animation.onfinish = ()=>{
+    flyer.remove();
+    Promise.allSettled(scorepadAnimations.map(scorepadAnimation=>scorepadAnimation.finished))
+      .then(finishSort);
+  };
 }
 function selectScorePad(id,v,sourceButton){
   if(id !== activeScorecardPlayerId()) return;
+  const previousTotal = Number(document.querySelector(`.prow[data-player-id="${id}"] .tot`)?.textContent || totalFor(id));
   const sourceRect = sourceButton?.getBoundingClientRect();
   sourceButton?.blur();
+  deferLeaderboardSort = true;
+  pendingLeaderboardSort = [];
+  deferLeaderboardScoreFor = id;
+  deferPlayerTurnAnimation = true;
   recordScorecardChange();
   state.hasScoredOnce = true;
   const playerEntryIndex = getPicks(id).cards.length;
@@ -604,11 +658,11 @@ function selectScorePad(id,v,sourceButton){
   animateNextPlayerTurn = true;
   if(totalFor(id) + roundScore(id) >= TARGET){
     commitRound();
-    animateScoreToLeaderboard(score,sourceRect,id);
+    animateScoreToLeaderboard(score,sourceRect,id,previousTotal,totalFor(id)+roundScore(id));
     return;
   }
   render();
-  animateScoreToLeaderboard(score,sourceRect,id);
+  animateScoreToLeaderboard(score,sourceRect,id,previousTotal,totalFor(id)+roundScore(id));
 }
 function commitRound(lowestDominoIds=[]){
   if(state.players.length === 0){ alert("Add players first."); return; }
