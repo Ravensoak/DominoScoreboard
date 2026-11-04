@@ -451,7 +451,7 @@ function handlePlayerHandleKeydown(event){
 function renderHistory(){
   const t = document.getElementById("history");
   if(state.players.length === 0){ t.innerHTML = ""; return; }
-  let head = '<thead><tr><th>R</th>' +
+  let head = '<thead><tr><th>Round No.</th>' +
     state.players.map((pl,index)=>{
       const color = playerColor(index);
       return `<th style="background-color:${color};color:${playerHeaderTextColor(color)}">${escapeHtml(pl.name)}</th>`;

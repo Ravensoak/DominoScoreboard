@@ -532,6 +532,11 @@ section {
   text-align: center;
   font-variant-numeric: tabular-nums;
 }
+.htable th:first-child,
+.htable td.rndlbl {
+  width: 1%;
+  white-space: nowrap;
+}
 .htable th {
   background: var(--panel2);
   color: var(--muted);
