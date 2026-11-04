@@ -63,18 +63,22 @@ function drawGraph() {
     rounds.forEach((round, roundIndex) => {
       const startTotal = total;
       if (Array.isArray(round.turns) && round.turns.length) {
-        round.turns.forEach((turn, turnIndex) => {
-          if (turn.playerId !== player.id) return;
-          const scoreDelta = Number(turn.score || 0);
-          total += scoreDelta;
+        const turnsPerRow = Math.max(players.length, 1);
+        const rowCount = Math.ceil(round.turns.length / turnsPerRow);
+        for (let rowIndex = 0; rowIndex < rowCount; rowIndex++) {
+          const rowTurns = round.turns.slice(rowIndex * turnsPerRow, (rowIndex + 1) * turnsPerRow);
+          const rowScore = rowTurns
+            .filter(turn => turn.playerId === player.id)
+            .reduce((sum, turn) => sum + Number(turn.score || 0), 0);
+          total += rowScore;
           values.push({
-            round: roundIndex + (turnIndex + 1) / round.turns.length,
+            round: roundIndex + (rowIndex + 1) / (rowCount + 1),
             roundNumber: roundIndex + 1,
             total,
-            scoreDelta,
-            autoZero: turn.autoZero === true
+            scoreDelta: rowScore,
+            autoZero: rowTurns.some(turn => turn.playerId === player.id && turn.autoZero === true)
           });
-        });
+        }
         if (round.lowestDominoIds?.includes(player.id)) {
           total += 1;
           values.push({
@@ -110,17 +114,21 @@ function drawGraph() {
         }
       }
     });
-    currentEntries.forEach((entry, entryIndex) => {
-      if (entry.playerId !== player.id) return;
-      const scoreDelta = Number(entry.score || 0);
-      total += scoreDelta;
+    const turnsPerRow = Math.max(players.length, 1);
+    const currentRowCount = Math.ceil(currentEntries.length / turnsPerRow);
+    for (let rowIndex = 0; rowIndex < currentRowCount; rowIndex++) {
+      const rowEntries = currentEntries.slice(rowIndex * turnsPerRow, (rowIndex + 1) * turnsPerRow);
+      const rowScore = rowEntries
+        .filter(entry => entry.playerId === player.id)
+        .reduce((sum, entry) => sum + Number(entry.score || 0), 0);
+      total += rowScore;
       values.push({
-        round: rounds.length + (entryIndex + 1) / currentEntries.length,
+        round: rounds.length + (rowIndex + 1) / (currentRowCount + 1),
         roundNumber: rounds.length + 1,
         total,
-        scoreDelta
+        scoreDelta: rowScore
       });
-    });
+    }
     return { player, index, color: colorFor(index), values };
   });
 
@@ -170,17 +178,28 @@ function drawGraph() {
     svg.append(svgElement("text", { x: margin.left - 10, y: yy + 4, "text-anchor": "end" }, formatValue(tick)));
   }
 
-  const labelEvery = Math.max(1, Math.ceil(axisRoundCount / 8));
   for (let round = 0; round <= axisRoundCount; round++) {
-    if (round !== 0 && round !== axisRoundCount && round % labelEvery !== 0) continue;
     const xx = x(round);
-    svg.append(svgElement("line", { x1: xx, y1: margin.top, x2: xx, y2: margin.top + plotHeight, class: "graph-gridline" }));
-    svg.append(svgElement("text", { x: xx, y: margin.top + plotHeight + 21, "text-anchor": "middle" }, String(round)));
+    const roundEnd = round > 0 && round <= rounds.length;
+    svg.append(svgElement("line", {
+      x1: xx,
+      y1: margin.top,
+      x2: xx,
+      y2: margin.top + plotHeight,
+      class: roundEnd ? "graph-round-boundary" : "graph-gridline"
+    }));
+    if (round === 0) {
+      svg.append(svgElement("text", { x: xx, y: margin.top + plotHeight + 21, "text-anchor": "middle" }, "Start"));
+    }
+  }
+  for (let round = 1; round <= axisRoundCount; round++) {
+    const labelX = x(round - 0.5);
+    svg.append(svgElement("text", { x: labelX, y: margin.top + plotHeight + 21, "text-anchor": "middle" }, `Round ${round}`));
   }
 
   svg.append(svgElement("line", { x1: margin.left, y1: margin.top, x2: margin.left, y2: margin.top + plotHeight, class: "graph-axis" }));
   svg.append(svgElement("line", { x1: margin.left, y1: margin.top + plotHeight, x2: width - margin.right, y2: margin.top + plotHeight, class: "graph-axis" }));
-  svg.append(svgElement("text", { x: margin.left + plotWidth / 2, y: height - 8, "text-anchor": "middle", class: "graph-axis-title" }, "Round number"));
+  svg.append(svgElement("text", { x: margin.left + plotWidth / 2, y: height - 8, "text-anchor": "middle", class: "graph-axis-title" }, "Rounds"));
   svg.append(svgElement("text", { x: 17, y: margin.top + plotHeight / 2, transform: `rotate(-90 17 ${margin.top + plotHeight / 2})`, "text-anchor": "middle", class: "graph-axis-title" }, "Total points"));
 
   series.forEach(({ player, index, color, values }) => {

@@ -751,14 +751,15 @@ section {
   justify-content: center;
   gap: 5px;
   color: #9a6b00;
-  font-weight: 800;
   white-space: nowrap;
 }
-.lowest-domino-award span {
-  padding: 2px 4px;
-  border: 1px solid currentColor;
-  border-radius: 4px;
+.lowest-domino-award .lowest-domino-score {
+  color: var(--ink);
+  font: inherit;
+}
+.lowest-domino-award .lowest-domino-label {
   font-size: 9px;
+  font-weight: 700;
   letter-spacing: 0.04em;
 }
 .lowest-domino-zero {
@@ -1623,6 +1624,11 @@ body[data-theme="dark"] .history-graph-link {
 .graph-gridline {
   stroke: #e5eaf1;
   stroke-width: 1;
+}
+.graph-round-boundary {
+  stroke: #aab5c4;
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
 }
 .graph-axis {
   stroke: #7b8798;

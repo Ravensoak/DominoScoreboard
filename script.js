@@ -499,7 +499,7 @@ function renderHistory(){
       }
       if(row.kind === "lowest-domino"){
         return row.playerIds.includes(pl.id)
-          ? '<td><div class="lowest-domino-award"><b>+1</b><span title="Lowest domino">LD</span></div></td>'
+          ? '<td><div class="lowest-domino-award"><span class="lowest-domino-score">1</span><span class="lowest-domino-label" title="Lowest domino">LD</span></div></td>'
           : '<td><div class="lowest-domino-zero">0</div></td>';
       }
       const value = Number(row.scores?.[pl.id]||0);
@@ -763,10 +763,12 @@ function openLowestDominoDialog(){
   if(state.players.length === 0) return;
   const back = document.getElementById("lowestDominoBack");
   const choices = document.getElementById("lowestDominoPlayers");
+  const confirmButton = document.getElementById("confirmLowestDomino");
   choices.innerHTML = state.players.map(pl=>
     `<label class="lowest-domino-option"><input type="checkbox" value="${escapeHtml(pl.id)}"><span>${escapeHtml(pl.name)}</span></label>`
   ).join("");
   choices.querySelectorAll('input[type="checkbox"]').forEach(input=>{ input.checked = false; });
+  confirmButton.disabled = true;
   back.hidden = false;
   back.classList.add("show");
   choices.querySelector("input")?.focus();
@@ -780,6 +782,7 @@ function closeLowestDominoDialog(){
 function confirmLowestDominoRound(){
   const selectedIds = [...document.querySelectorAll("#lowestDominoPlayers input:checked")]
     .map(input=>input.value);
+  if(selectedIds.length === 0) return;
   closeLowestDominoDialog();
   commitRound(selectedIds);
 }
@@ -809,6 +812,12 @@ document.getElementById("scorecardRedo").onclick = redoScorecardAction;
 document.getElementById("endRoundBtn").onclick = openLowestDominoDialog;
 document.getElementById("cancelLowestDomino").onclick = closeLowestDominoDialog;
 document.getElementById("confirmLowestDomino").onclick = confirmLowestDominoRound;
+document.getElementById("lowestDominoPlayers").addEventListener("change", event=>{
+  if(event.target.matches('input[type="checkbox"]')){
+    document.getElementById("confirmLowestDomino").disabled =
+      !document.querySelector("#lowestDominoPlayers input:checked");
+  }
+});
 document.getElementById("lowestDominoBack").addEventListener("click",event=>{
   if(event.target.id === "lowestDominoBack") closeLowestDominoDialog();
 });
