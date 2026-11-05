@@ -1411,6 +1411,16 @@ header h1 .pip {
   background: #fff;
   box-shadow: 0 14px 38px #25385825;
 }
+.settings-title {
+  margin: -15px -15px 14px;
+  padding: 12px 15px 12px;
+  border-bottom: 1px solid #e6ebf2;
+  background: #f1f5fa;
+  color: #26364d;
+  font-size: 16px;
+  line-height: 1.25;
+  border-radius: 13px 13px 0 0;
+}
 .settings-label {
   margin-bottom: 9px;
   color: #53637a;
@@ -1450,6 +1460,18 @@ header h1 .pip {
   margin-bottom: 15px;
   padding-bottom: 12px;
   border-bottom: 1px solid #e6ebf2;
+}
+.game-type-options-group {
+  padding: 9px 10px;
+  border: 1px solid #dce4ef;
+  border-radius: 10px;
+  background: #f6f8fc;
+}
+.game-type-note {
+  margin: 9px 0 0;
+  color: #66758b;
+  font-size: 11px;
+  line-height: 1.45;
 }
 .theme-options {
   display: grid;
@@ -1513,6 +1535,10 @@ header h1 .pip {
   text-decoration: none;
   font-size: 13px;
   font-weight: 650;
+}
+.settings-divider {
+  margin-top: 12px;
+  border-top: 1px solid #e6ebf2;
 }
 .settings-refresh {
   width: 100%;
@@ -1937,12 +1963,24 @@ body[data-theme="dark"] .settings-panel {
 body[data-theme="dark"] .settings-label {
   color: #c3cee3;
 }
+body[data-theme="dark"] .settings-title {
+  color: #eef3fb;
+  border-bottom-color: #34415d;
+  background: #202c45;
+}
 body[data-theme="dark"] .settings-number {
   border-bottom-color: #34415d;
   color: #c3cee3;
 }
 body[data-theme="dark"] .game-type-setting {
   border-bottom-color: #34415d;
+}
+body[data-theme="dark"] .game-type-options-group {
+  background: #34383e;
+  border-color: #4a5058;
+}
+body[data-theme="dark"] .game-type-note {
+  color: #b3bbc5;
 }
 body[data-theme="dark"] .settings-number input {
   background: #202c45;
@@ -2451,6 +2489,9 @@ body[data-theme="dark"] .theme-choice.selected {
   color: #a4eafa;
 }
 body[data-theme="dark"] .settings-link {
+  border-top-color: #454a52;
+}
+body[data-theme="dark"] .settings-divider {
   border-top-color: #454a52;
 }
 body[data-theme="dark"] .settings-refresh {

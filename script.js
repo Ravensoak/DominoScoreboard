@@ -182,11 +182,19 @@ function render(){
 
 function updateGameStatus(){
   const inProgress = state.hasScoredOnce;
+  const waitingForPlayers = !inProgress && (
+    state.players.length === 0 ||
+    (state.gameType === "individual" && state.players.length === 1) ||
+    (state.gameType === "team" && state.players.length < 4)
+  );
   const status = document.getElementById("gameStatus");
   const label = document.getElementById("gameStatusText");
   if(!status || !label) return;
   status.classList.toggle("is-in-progress", inProgress);
-  label.textContent = inProgress ? "Game in Progress" : "Ready to Start";
+  label.textContent = inProgress ? "Game in Progress" : waitingForPlayers ? "Awaiting Players" : "Ready to Start";
+  status.title = waitingForPlayers
+    ? state.gameType === "team" ? "Team games needs 4 players" : "Individual games needs a minimum of 2 players"
+    : "";
 }
 
 function scorecardSnapshot(){

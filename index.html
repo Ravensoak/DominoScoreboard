@@ -19,17 +19,21 @@
   <div class="target">Points to win <b id="targetLbl">120</b></div>
   <button class="btn small ghost" id="newGameBtn">New Game</button>
   <details class="settings-menu" id="settingsMenu">
-    <summary class="btn small ghost" aria-label="Open settings" title="Settings">⚙</summary>
+    <summary class="btn small ghost" aria-label="Open settings" title="Game Settings">⚙</summary>
     <div class="settings-panel">
+      <h2 class="settings-title">Game Settings</h2>
       <label class="settings-number" for="pointsToWinInput">
         <span>Points to Win</span>
         <input id="pointsToWinInput" type="number" min="1" step="1" inputmode="numeric" aria-label="Points to Win">
       </label>
       <div class="game-type-setting">
         <div class="settings-label">Game Type</div>
-        <div class="theme-options" role="group" aria-label="Choose a game type">
-          <button class="theme-choice" type="button" data-game-type="individual" aria-pressed="false">Individual</button>
-          <button class="theme-choice" type="button" data-game-type="team" aria-pressed="false">Team</button>
+        <div class="game-type-options-group">
+          <div class="theme-options" role="group" aria-label="Choose a game type">
+            <button class="theme-choice" type="button" data-game-type="individual" aria-pressed="false">Individual</button>
+            <button class="theme-choice" type="button" data-game-type="team" aria-pressed="false">Team</button>
+          </div>
+          <p class="game-type-note">Playing Individually requires a minumum of 2 players.<br>Playing as a team requires 4 players exact.</p>
         </div>
       </div>
       <div class="settings-label">Appearance</div>
@@ -38,6 +42,7 @@
         <button class="theme-choice" type="button" data-theme-choice="dark">☾ Dark</button>
       </div>
       <a class="settings-link" href="instructions.html" id="instructionsLink">How to use the scorer <span aria-hidden="true">↗</span></a>
+      <div class="settings-divider" aria-hidden="true"></div>
       <div class="settings-refresh-group">
         <button class="settings-link settings-refresh" type="button" id="refreshApp"><span aria-hidden="true">↻</span> Refresh App</button>
         <p class="settings-refresh-note">Reload to get the latest available version. Saved scores stay on this device; unsaved settings or player names will be lost.</p>
