@@ -75,6 +75,8 @@ header h1 .pip {
 }
 .target b {
   color: var(--bad);
+  font-size: 17px;
+  font-weight: 800;
 }
 .btn {
   border: 1px solid var(--line);
@@ -1409,7 +1411,8 @@ header h1 .pip {
   position: absolute;
   top: calc(100% + 10px);
   right: 0;
-  width: 250px;
+  width: 290px;
+  max-width: calc(100vw - 32px);
   padding: 15px;
   border: 1px solid #dce4ef;
   border-radius: 14px;
@@ -2917,3 +2920,6 @@ body[data-theme="dark"] .result-place {
 #roundEntry .score-pad-section {
   margin-top: 8px;
 }
+
+
+
