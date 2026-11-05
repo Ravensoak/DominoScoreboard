@@ -57,7 +57,14 @@ function drawGraph() {
     return;
   }
 
-  const series = players.map((player, index) => {
+  const graphPlayers = gameState?.gameType === "team"
+    ? [[0,2],[1,3]].map((indexes,teamIndex)=>{
+        const members = indexes.map(index=>players[index]).filter(Boolean);
+        return {id:`team-${teamIndex+1}`,name:members.length ? members.map(player=>player.name).join(" & ") : `Team ${teamIndex+1}`,members,index:indexes[0]};
+      })
+    : players.map((player,index)=>({id:player.id,name:player.name,members:[player],index}));
+  const series = graphPlayers.map(({name,members,index}, seriesIndex) => {
+    const memberIds = new Set(members.map(player=>player.id));
     let total = 0;
     const values = [{ round: 0, roundNumber: 0, total: 0 }];
     rounds.forEach((round, roundIndex) => {
@@ -68,7 +75,7 @@ function drawGraph() {
         for (let rowIndex = 0; rowIndex < rowCount; rowIndex++) {
           const rowTurns = round.turns.slice(rowIndex * turnsPerRow, (rowIndex + 1) * turnsPerRow);
           const rowScore = rowTurns
-            .filter(turn => turn.playerId === player.id)
+            .filter(turn => memberIds.has(turn.playerId))
             .reduce((sum, turn) => sum + Number(turn.score || 0), 0);
           total += rowScore;
           values.push({
@@ -76,25 +83,26 @@ function drawGraph() {
             roundNumber: roundIndex + 1,
             total,
             scoreDelta: rowScore,
-            autoZero: rowTurns.some(turn => turn.playerId === player.id && turn.autoZero === true)
+            autoZero: rowTurns.some(turn => memberIds.has(turn.playerId) && turn.autoZero === true)
           });
         }
-        if (round.lowestDominoIds?.includes(player.id)) {
-          total += 1;
+        if (round.lowestDominoIds?.some(id=>memberIds.has(id))) {
+          const bonus = round.lowestDominoIds.filter(id=>memberIds.has(id)).length;
+          total += bonus;
           values.push({
             round: roundIndex + 1,
             roundNumber: roundIndex + 1,
             total,
-            scoreDelta: 1,
+            scoreDelta: bonus,
             lowestDomino: true
           });
         }
       } else {
-        const scoreDelta = Number(round.scores?.[player.id] || 0);
+        const scoreDelta = members.reduce((sum,player)=>sum+Number(round.scores?.[player.id]||0),0);
         total += scoreDelta;
         values.push({ round: roundIndex + 1, roundNumber: roundIndex + 1, total, scoreDelta });
       }
-      const expectedTotal = startTotal + Number(round.scores?.[player.id] || 0);
+      const expectedTotal = startTotal + members.reduce((sum,player)=>sum+Number(round.scores?.[player.id]||0),0);
       if (Math.abs(total - expectedTotal) > 0.0001) {
         const scoreDelta = expectedTotal - total;
         total = expectedTotal;
@@ -119,7 +127,7 @@ function drawGraph() {
     for (let rowIndex = 0; rowIndex < currentRowCount; rowIndex++) {
       const rowEntries = currentEntries.slice(rowIndex * turnsPerRow, (rowIndex + 1) * turnsPerRow);
       const rowScore = rowEntries
-        .filter(entry => entry.playerId === player.id)
+        .filter(entry => memberIds.has(entry.playerId))
         .reduce((sum, entry) => sum + Number(entry.score || 0), 0);
       total += rowScore;
       values.push({
@@ -129,13 +137,13 @@ function drawGraph() {
         scoreDelta: rowScore
       });
     }
-    return { player, index, color: colorFor(index), values };
+    return { name, index, color: colorFor(index), values };
   });
 
   summary.textContent = currentEntries.length
     ? `${rounds.length} completed round${rounds.length === 1 ? "" : "s"}; ${currentEntries.length} score entr${currentEntries.length === 1 ? "y" : "ies"} in round ${rounds.length + 1}.`
-    : `${rounds.length} completed round${rounds.length === 1 ? "" : "s"}; markers show individual scores.`;
-  legend.replaceChildren(...series.map(({ player, index, color }) => {
+    : `${rounds.length} completed round${rounds.length === 1 ? "" : "s"}; markers show ${gameState?.gameType === "team" ? "team" : "individual player"} scores.`;
+  legend.replaceChildren(...series.map(({ name:seriesName, index, color }) => {
     const item = document.createElement("span");
     item.className = "graph-legend-item";
     const swatch = document.createElement("span");
@@ -143,7 +151,7 @@ function drawGraph() {
     swatch.style.backgroundColor = color;
     swatch.setAttribute("aria-hidden", "true");
     const name = document.createElement("span");
-    name.textContent = `Player ${index + 1}: ${player.name}`;
+    name.textContent = gameState?.gameType === "team" ? seriesName : `Player ${index + 1}: ${seriesName}`;
     item.append(swatch, name);
     return item;
   }));
@@ -202,7 +210,7 @@ function drawGraph() {
   svg.append(svgElement("text", { x: margin.left + plotWidth / 2, y: height - 8, "text-anchor": "middle", class: "graph-axis-title" }, "Rounds"));
   svg.append(svgElement("text", { x: 17, y: margin.top + plotHeight / 2, transform: `rotate(-90 17 ${margin.top + plotHeight / 2})`, "text-anchor": "middle", class: "graph-axis-title" }, "Total points"));
 
-  series.forEach(({ player, index, color, values }) => {
+  series.forEach(({ name:seriesName, index, color, values }) => {
     const points = values.map(point => `${x(point.round)},${y(point.total)}`).join(" ");
     svg.append(svgElement("polyline", { points, stroke: color, class: "graph-line" }));
     values.slice(1).forEach(point => {
@@ -216,7 +224,8 @@ function drawGraph() {
       const change = point.lowestDomino
         ? "lowest domino bonus +1"
         : `score ${point.scoreDelta >= 0 ? "+" : ""}${formatValue(point.scoreDelta)}`;
-      marker.append(svgElement("title", {}, `Player ${index + 1} (${player.name}), round ${point.roundNumber}: ${change}; total ${formatValue(point.total)}`));
+      const label = gameState?.gameType === "team" ? seriesName : `Player ${index + 1} (${seriesName})`;
+      marker.append(svgElement("title", {}, `${label}, round ${point.roundNumber}: ${change}; total ${formatValue(point.total)}`));
       svg.append(marker);
     });
   });

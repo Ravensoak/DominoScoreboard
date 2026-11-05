@@ -1446,6 +1446,11 @@ header h1 .pip {
   outline: 2px solid #1682a2;
   outline-offset: 1px;
 }
+.game-type-setting {
+  margin-bottom: 15px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e6ebf2;
+}
 .theme-options {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1464,6 +1469,10 @@ header h1 .pip {
 }
 .theme-choice:hover {
   border-color: #afbdcf;
+}
+.theme-choice:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 .theme-choice.selected {
   border-color: #1682a2;
@@ -1519,10 +1528,35 @@ header h1 .pip {
   text-align: left;
   cursor: pointer;
 }
+.settings-refresh-group {
+  margin-top: 12px;
+  padding: 9px 10px;
+  border: 1px solid #dce4ef;
+  border-radius: 10px;
+  background: #f6f8fc;
+}
+.settings-refresh-group .settings-refresh {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+  padding: 9px 10px;
+  border: 1px solid #dce4ef;
+  border-radius: 9px;
+  background: #fff;
+}
+.settings-refresh-group .settings-refresh:hover {
+  background: #edf2f8;
+}
 .settings-refresh:hover {
   background: #edf2f8;
   border-color: #bfcbd9;
   text-decoration: none;
+}
+.settings-refresh-note {
+  margin: 6px 0 0;
+  color: #68788f;
+  font-size: 11px;
+  line-height: 1.45;
 }
 .settings-link:hover {
   text-decoration: underline;
@@ -1906,6 +1940,9 @@ body[data-theme="dark"] .settings-label {
 body[data-theme="dark"] .settings-number {
   border-bottom-color: #34415d;
   color: #c3cee3;
+}
+body[data-theme="dark"] .game-type-setting {
+  border-bottom-color: #34415d;
 }
 body[data-theme="dark"] .settings-number input {
   background: #202c45;
@@ -2421,6 +2458,20 @@ body[data-theme="dark"] .settings-refresh {
   border-color: #4a5058;
   color: #e0e3e8;
 }
+body[data-theme="dark"] .settings-refresh-group {
+  background: #34383e;
+  border-color: #4a5058;
+}
+body[data-theme="dark"] .settings-refresh-group .settings-refresh {
+  background: #292d32;
+  border-color: #4a5058;
+}
+body[data-theme="dark"] .settings-refresh-group .settings-refresh:hover {
+  background: #3d4249;
+}
+body[data-theme="dark"] .settings-refresh-note {
+  color: #b3bbc5;
+}
 body[data-theme="dark"] .settings-refresh:hover {
   background: #3d4249;
   border-color: #5c626b;
@@ -2762,4 +2813,38 @@ body[data-theme="dark"] .result-place {
   .firework {
     top: 48px;
   }
+}
+
+.leaderboard-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.game-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+.game-status-dot {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 8px;
+  border-radius: 50%;
+  background: #91a0b4;
+}
+.game-status.is-in-progress .game-status-dot {
+  background: #f0c419;
+  animation: game-status-flash 1.2s ease-in-out infinite;
+}
+@keyframes game-status-flash {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 #f0c41955; }
+  50% { opacity: .35; box-shadow: 0 0 0 5px #f0c41900; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .game-status.is-in-progress .game-status-dot { animation: none; }
 }

@@ -32,6 +32,7 @@ let state = load() || {
   groups: [],      // saved rosters for quick re-use: [{id, names:[...]}]
 };
 if(!state.groups) state.groups = [];   // migrate states saved before groups existed
+if(state.gameType !== "team") state.gameType = "individual";
 if(!state.picks) state.picks = {};
 if(!Array.isArray(state.passedPlayers)) state.passedPlayers = [];
 if(!Object.prototype.hasOwnProperty.call(state,"lastScorerId")){
@@ -114,6 +115,13 @@ function activeScorecardPlayerId(){
   const lastIndex = state.players.findIndex(pl=>pl.id===state.lastScorerId);
   return state.players[(lastIndex + 1) % state.players.length].id;
 }
+function scorecardEnabledPlayerId(){
+  if(state.gameType === "team"){
+    if(state.players.length < 4) return null;
+    if(!state.hasScoredOnce && !state.currentEntries.length) return state.players[0].id;
+  }
+  return activeScorecardPlayerId();
+}
 function cardClass(v){
   if(v < 0) return "neg";
   if(v === 0) return "zero";
@@ -129,24 +137,56 @@ function totalFor(id){
   });
   return t;
 }
+function scoreRows(includeCurrent=false){
+  if(state.gameType !== "team") return state.players.map((player,index)=>({
+    id:player.id,name:player.name,total:totalFor(player.id)+(includeCurrent && hasScoreSelected(player.id)?roundScore(player.id):0),playerIndex:index,playerIds:[player.id],player
+  }));
+  return [0,1].map(teamIndex=>{
+    const indexes = teamIndex === 0 ? [0,2] : [1,3];
+    const members = indexes.map(index=>state.players[index]).filter(Boolean);
+    return {
+      id:`team-${teamIndex+1}`,
+      name:members.length ? members.map(player=>player.name).join(" & ") : `Team ${teamIndex+1}`,
+      total:members.reduce((sum,player)=>sum+totalFor(player.id)+(includeCurrent && hasScoreSelected(player.id)?roundScore(player.id):0),0),
+      playerIndex:indexes[0],
+      playerIds:members.map(player=>player.id),
+      members
+    };
+  });
+}
 function highestTotal(){
-  if(state.players.length === 0) return 0;
-  return Math.max(...state.players.map(pl => totalFor(pl.id)));
+  const rows = scoreRows();
+  return rows.length ? Math.max(...rows.map(row=>row.total)) : 0;
 }
 function gameOver(){ return highestTotal() >= TARGET; }
 
 /* ---------- rendering ---------- */
 function render(){
+  updateGameStatus();
   renderWin();
   renderGameResults();
   renderStandings();
   if(!deferPlayerTurnAnimation) renderRoundEntry();
   renderHistory();
   renderGroups();
+  updateGameTypeControls();
+  const playerLimitReached = state.players.length >= 4;
+  document.getElementById("newPlayerName").disabled = playerLimitReached;
+  document.getElementById("addPlayerBtn").disabled = playerLimitReached;
+  document.getElementById("newPlayerName").placeholder = playerLimitReached ? "Maximum 4 players" : "Add player name…";
   document.getElementById("roundTitle").textContent = "Round " + (state.rounds.length + 1) + " Scorecards";
   document.getElementById("endRoundBtn").hidden = !state.hasScoredOnce;
   updateScorecardHistoryControls();
   save();
+}
+
+function updateGameStatus(){
+  const inProgress = state.hasScoredOnce;
+  const status = document.getElementById("gameStatus");
+  const label = document.getElementById("gameStatusText");
+  if(!status || !label) return;
+  status.classList.toggle("is-in-progress", inProgress);
+  label.textContent = inProgress ? "Game in Progress" : "Ready to Start";
 }
 
 function scorecardSnapshot(){
@@ -204,14 +244,13 @@ function renderGameResults(){
     backdrop.hidden = true;
     return;
   }
-  const results = state.players.map(player=>({player,total:totalFor(player.id)}))
-    .sort((a,b)=>b.total-a.total || a.player.name.localeCompare(b.player.name));
-  const resultKey = results.map(result=>`${result.player.id}:${result.total}`).join("|");
+  const results = scoreRows().sort((a,b)=>b.total-a.total || a.name.localeCompare(b.name));
+  const resultKey = results.map(result=>`${result.id}:${result.total}`).join("|");
   if(state.resultsDismissedFor === resultKey) return;
 
   const winningScore = results[0].total;
   const winners = results.filter(result=>result.total === winningScore);
-  const winnerNames = winners.map(result=>escapeHtml(result.player.name)).join(" &amp; ");
+  const winnerNames = winners.map(result=>escapeHtml(result.name)).join(" &amp; ");
   document.getElementById("resultsWinner").innerHTML = winners.length > 1
     ? `${winnerNames} tie with <b>${winningScore}</b> ${winningScore === 1 ? "point" : "points"}.`
     : `${winnerNames} wins with <b>${winningScore}</b> ${winningScore === 1 ? "point" : "points"}.`;
@@ -223,7 +262,7 @@ function renderGameResults(){
     previousScore = result.total;
     return `<li class="result-row ${result.total === winningScore ? "winner" : ""}">
       <span class="result-place">${ordinal(place)}</span>
-      <span class="result-name">${escapeHtml(result.player.name)}</span>
+      <span class="result-name">${escapeHtml(result.name)}</span>
       <span class="result-score">${result.total}</span>
     </li>`;
   }).join("");
@@ -231,9 +270,8 @@ function renderGameResults(){
 }
 
 function returnToScoreboard(){
-  const results = state.players.map(player=>({player,total:totalFor(player.id)}))
-    .sort((a,b)=>b.total-a.total || a.player.name.localeCompare(b.player.name));
-  state.resultsDismissedFor = results.map(result=>`${result.player.id}:${result.total}`).join("|");
+  const results = scoreRows().sort((a,b)=>b.total-a.total || a.name.localeCompare(b.name));
+  state.resultsDismissedFor = results.map(result=>`${result.id}:${result.total}`).join("|");
   document.getElementById("resultsBackdrop").hidden = true;
   save();
   document.getElementById("standings").scrollIntoView({behavior:"smooth",block:"start"});
@@ -243,8 +281,8 @@ function renderWin(){
   const wrap = document.getElementById("winWrap");
   if(!gameOver() || state.players.length === 0){ wrap.innerHTML = ""; return; }
   const high = highestTotal();
-  const winnersList = state.players.filter(p => totalFor(p.id) === high);
-  const names = winnersList.map(p=>p.name).join(" & ");
+  const winnersList = scoreRows().filter(row => row.total === high);
+  const names = winnersList.map(row=>row.name).join(" & ");
   const txt = winnersList.length>1
     ? "🏆 Tie at " + high + "! " + names + " win"
     : "🏆 " + names + " wins with " + high + "!";
@@ -261,16 +299,19 @@ function renderStandings(){
     el.innerHTML = '<div class="empty">No players yet — add some at the bottom to start.</div>';
     return;
   }
-  const totalWithCurrentRound = id => totalFor(id) + (hasScoreSelected(id) ? roundScore(id) : 0);
-  const high = Math.max(...state.players.map(pl=>totalWithCurrentRound(pl.id)));
+  const sorted = scoreRows(true).sort((a,b)=>
+    (state.gameType === "individual" || (state.gameType === "team" && !state.hasScoredOnce))
+      ? a.playerIndex-b.playerIndex
+      : b.total-a.total || a.playerIndex-b.playerIndex
+  );
+  const high = Math.max(...sorted.map(row=>row.total));
   const activeTurnId = activeScorecardPlayerId();
-  const sorted = state.players.slice().sort((a,b)=> totalWithCurrentRound(b.id)-totalWithCurrentRound(a.id)); // highest total first
   el.innerHTML = sorted.map((pl,i)=>{
-    const playerIndex = state.players.findIndex(player=>player.id===pl.id);
-    const tot = totalWithCurrentRound(pl.id);
+    const playerIndex = pl.playerIndex;
+    const tot = pl.total;
     const room = Math.max(0, TARGET - tot);
     const isLead = tot === high;
-    const isTurn = pl.id === activeTurnId;
+    const isTurn = state.gameType !== "team" && pl.id === activeTurnId;
     const isOut = tot >= TARGET;
     const pct = Math.min(100, tot/TARGET*100);
     const awayHtml = isOut ? '<b>OVER '+TARGET+'</b>'
@@ -278,7 +319,7 @@ function renderStandings(){
     return `<div class="prow ${isOut?'out':''} ${isLead?'lead':''} ${(!isOut&&room<=20&&!isLead)?'danger':''}" data-player-id="${pl.id}" style="--player-color:${playerColor(playerIndex)}">
       <div class="rank">${i+1}</div>
       <div style="flex:1 1 auto; min-width:0;">
-        <div class="nm" onclick="renamePlayer('${pl.id}')" title="tap to rename">
+        <div class="nm" ${state.gameType === "team" ? "" : `onclick="renamePlayer('${pl.id}')" title="tap to rename"`}>
           <span class="player-name-text">${escapeHtml(pl.name)}</span>
           ${isTurn && !deferPlayerTurnAnimation ? `<span class="turn-indicator" style="--turn-color:${playerColor(playerIndex)}" role="img" aria-label="Current turn to score" title="Current turn to score"></span>` : ""}
         </div>
@@ -286,7 +327,7 @@ function renderStandings(){
       </div>
       <div class="tot">${tot}</div>
       <div class="away">${awayHtml}</div>
-      <div class="x" onclick="deletePlayer('${pl.id}')" title="remove">✕</div>
+      ${state.gameType === "team" ? "" : `<div class="x" onclick="deletePlayer('${pl.id}')" title="remove">✕</div>`}
     </div>`;
   }).join("");
 
@@ -318,7 +359,9 @@ function renderStandings(){
 
 function renderRoundEntry(){
   const el = document.getElementById("roundEntry");
-  const activePlayerId = activeScorecardPlayerId();
+  const activePlayerId = scorecardEnabledPlayerId();
+  const waitingForSecondPlayer = state.gameType === "individual" && !state.hasScoredOnce && state.players.length === 1;
+  const waitingForTeamRoster = state.gameType === "team" && state.players.length < 4;
   const showAllCards = !state.hasScoredOnce;
   const visiblePlayers = showAllCards
     ? state.players
@@ -340,11 +383,12 @@ function renderRoundEntry(){
   el.innerHTML = visiblePlayers.map(pl=>{
     const index = state.players.indexOf(pl);
     const headerColor = playerColor(index);
-    const isActive = pl.id === activePlayerId;
+    const isActive = pl.id === activePlayerId && !waitingForSecondPlayer;
+    const isLocked = pl.id !== activePlayerId || waitingForSecondPlayer;
     const scorePadBtns = [1,2,3,4,6,8].map(v=>
       `<button type="button" class="score-pad-btn" aria-pressed="false" ${isActive?'':'disabled'} onclick="selectScorePad('${pl.id}',${v},this)">${v}</button>`
     ).join("");
-    return `<div class="player-round ${isActive?'is-active':'is-locked'}${isActive && animateNextPlayerTurn && !deferPlayerTurnAnimation?' turn-enter':''}" data-player-id="${pl.id}" aria-disabled="${!isActive}">
+    return `<div class="player-round ${isActive?'is-active':'is-locked'}${isActive && animateNextPlayerTurn && !deferPlayerTurnAnimation?' turn-enter':''}" data-player-id="${pl.id}" aria-disabled="${isLocked}">
       <div class="pr-head" style="--player-color:${headerColor};--player-text-color:${playerHeaderTextColor(headerColor)}">
         ${showAllCards ? `<button type="button" class="drag-handle" aria-label="Reorder ${escapeHtml(pl.name)}; use the up and down arrow keys" title="Drag to reorder players">⠿</button>` : ""}
         <div class="nm">${escapeHtml(pl.name)}</div>
@@ -353,11 +397,11 @@ function renderRoundEntry(){
       <div class="pr-body">
         <div class="score-pad-section">
           <div class="score-pad-label">Score pads</div>
-          <div class="score-pad"><button type="button" class="score-pad-btn score-pad-zero" aria-pressed="false" ${isActive?'':'disabled'} onclick="selectScorePad('${pl.id}',0,this)">0</button>${scorePadBtns}</div>
+        <div class="score-pad"><button type="button" class="score-pad-btn score-pad-zero" aria-pressed="false" ${isActive?'':'disabled'} onclick="selectScorePad('${pl.id}',0,this)">0</button>${scorePadBtns}</div>
         </div>
       </div>
       <div class="pr-foot">
-        <span class="hint">${isActive?'Select one score':'Waiting for previous player'}</span>
+        <span class="hint">${waitingForTeamRoster?'Add 4 players to start':waitingForSecondPlayer?'Add a second player to start':isActive?'Select one score':'Waiting for previous player'}</span>
       </div>
     </div>`;
   }).join("");
@@ -541,6 +585,7 @@ function renderGroups(){
 
 /* ---------- actions ---------- */
 function addPlayer(){
+  if(state.players.length >= 4) return;
   const inp = document.getElementById("newPlayerName");
   const name = inp.value.trim();
   if(!name) return;
@@ -640,13 +685,15 @@ function animateScoreToLeaderboard(score, sourceRect, playerId, previousTotal, n
   };
 }
 function selectScorePad(id,v,sourceButton){
-  if(id !== activeScorecardPlayerId()) return;
-  const previousTotal = Number(document.querySelector(`.prow[data-player-id="${id}"] .tot`)?.textContent || totalFor(id));
+  if((state.gameType === "individual" && !state.hasScoredOnce && state.players.length === 1) || id !== scorecardEnabledPlayerId()) return;
+  const playerIndex = state.players.findIndex(player=>player.id===id);
+  const leaderboardRowId = state.gameType === "team" ? `team-${playerIndex % 2 === 0 ? 1 : 2}` : id;
+  const previousTotal = Number(document.querySelector(`.prow[data-player-id="${leaderboardRowId}"] .tot`)?.textContent || 0);
   const sourceRect = sourceButton?.getBoundingClientRect();
   sourceButton?.blur();
   deferLeaderboardSort = true;
   pendingLeaderboardSort = [];
-  deferLeaderboardScoreFor = id;
+  deferLeaderboardScoreFor = leaderboardRowId;
   deferPlayerTurnAnimation = true;
   recordScorecardChange();
   state.hasScoredOnce = true;
@@ -655,14 +702,15 @@ function selectScorePad(id,v,sourceButton){
   getPicks(id).cards.push(score);
   state.currentEntries.push({playerId:id,score,playerEntryIndex});
   state.lastScorerId = id;
+  const nextTotal = scoreRows(true).find(row=>row.id===leaderboardRowId)?.total ?? previousTotal + score;
   animateNextPlayerTurn = true;
   if(totalFor(id) + roundScore(id) >= TARGET){
     commitRound();
-    animateScoreToLeaderboard(score,sourceRect,id,previousTotal,totalFor(id)+roundScore(id));
+    animateScoreToLeaderboard(score,sourceRect,leaderboardRowId,previousTotal,nextTotal);
     return;
   }
   render();
-  animateScoreToLeaderboard(score,sourceRect,id,previousTotal,totalFor(id)+roundScore(id));
+  animateScoreToLeaderboard(score,sourceRect,leaderboardRowId,previousTotal,nextTotal);
 }
 function commitRound(lowestDominoIds=[]){
   if(state.players.length === 0){ alert("Add players first."); return; }
@@ -715,7 +763,7 @@ async function useGroup(id){
   if(!g) return;
   if((state.rounds.length > 0 || anyPicks()) &&
      !(await confirmModal("Start a new game with " + g.names.join(", ") + "? This clears the current game.", "Start"))) return;
-  state.players = g.names.map(n=>({ id:uid(), name:n }));
+  state.players = g.names.slice(0,4).map(n=>({ id:uid(), name:n }));
   clearScorecardHistory();
   state.rounds = [];
   state.picks = {};
@@ -856,6 +904,22 @@ function setTheme(theme){
   document.querySelector('meta[name="theme-color"]').content = selected === "dark" ? "#191b1f" : "#ffffff";
 }
 
+function setGameType(gameType){
+  if(state.hasScoredOnce) return;
+  state.gameType = gameType === "team" ? "team" : "individual";
+  updateGameTypeControls();
+  save();
+  if(typeof render === "function") render();
+}
+function updateGameTypeControls(){
+  document.querySelectorAll("[data-game-type]").forEach(button=>{
+    const active = button.dataset.gameType === state.gameType;
+    button.classList.toggle("selected", active);
+    button.setAttribute("aria-pressed", String(active));
+    button.disabled = state.hasScoredOnce;
+  });
+}
+
 /* ---------- wire up ---------- */
 document.getElementById("addPlayerBtn").onclick = addPlayer;
 document.getElementById("newPlayerName").addEventListener("keydown", e=>{ if(e.key==="Enter") addPlayer(); });
@@ -904,6 +968,10 @@ setTheme(localStorage.getItem(THEME_KEY) || "light");
 document.querySelectorAll("[data-theme-choice]").forEach(button=>{
   button.addEventListener("click", ()=>setTheme(button.dataset.themeChoice));
 });
+document.querySelectorAll("[data-game-type]").forEach(button=>{
+  button.addEventListener("click", ()=>setGameType(button.dataset.gameType));
+});
+setGameType(state.gameType);
 document.getElementById("instructionsLink").addEventListener("click", ()=>{
   document.getElementById("settingsMenu").open = false;
 });

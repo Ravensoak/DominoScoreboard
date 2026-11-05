@@ -25,13 +25,23 @@
         <span>Points to Win</span>
         <input id="pointsToWinInput" type="number" min="1" step="1" inputmode="numeric" aria-label="Points to Win">
       </label>
+      <div class="game-type-setting">
+        <div class="settings-label">Game Type</div>
+        <div class="theme-options" role="group" aria-label="Choose a game type">
+          <button class="theme-choice" type="button" data-game-type="individual" aria-pressed="false">Individual</button>
+          <button class="theme-choice" type="button" data-game-type="team" aria-pressed="false">Team</button>
+        </div>
+      </div>
       <div class="settings-label">Appearance</div>
       <div class="theme-options" role="group" aria-label="Choose a theme">
         <button class="theme-choice" type="button" data-theme-choice="light">☀ Light</button>
         <button class="theme-choice" type="button" data-theme-choice="dark">☾ Dark</button>
       </div>
       <a class="settings-link" href="instructions.html" id="instructionsLink">How to use the scorer <span aria-hidden="true">↗</span></a>
-      <button class="settings-link settings-refresh" type="button" id="refreshApp"><span aria-hidden="true">↻</span> Refresh App</button>
+      <div class="settings-refresh-group">
+        <button class="settings-link settings-refresh" type="button" id="refreshApp"><span aria-hidden="true">↻</span> Refresh App</button>
+        <p class="settings-refresh-note">Reload to get the latest available version. Saved scores stay on this device; unsaved settings or player names will be lost.</p>
+      </div>
       <button class="settings-close" type="button" id="settingsClose">Close</button>
     </div>
   </details>
@@ -74,7 +84,11 @@
 <!-- STANDINGS -->
 <section>
   <div class="card">
-    <div class="head"><h2>Leaderboard</h2>
+    <div class="head leaderboard-head"><h2>Leaderboard</h2>
+      <div class="game-status" id="gameStatus" role="status" aria-live="polite">
+        <span class="game-status-dot" aria-hidden="true"></span>
+        <span id="gameStatusText">Ready to Start</span>
+      </div>
     </div>
     <div class="body"><div class="stand" id="standings"></div></div>
   </div>
