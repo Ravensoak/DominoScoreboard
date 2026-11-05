@@ -1497,10 +1497,12 @@ header h1 .pip {
   cursor: not-allowed;
 }
 .theme-choice.selected {
-  border-color: #1682a2;
-  background: #e9f6fa;
-  color: #126783;
-  box-shadow: 0 0 0 2px #1682a214;
+  border: 2px solid #087b9b;
+  padding: 7px 9px;
+  background: #087b9b;
+  color: #fff;
+  font-weight: 800;
+  box-shadow: 0 0 0 2px #087b9b35;
 }
 .settings-toggle {
   display: flex;
@@ -1993,9 +1995,10 @@ body[data-theme="dark"] .theme-choice {
   color: #c3cee3;
 }
 body[data-theme="dark"] .theme-choice.selected {
-  background: #173746;
+  background: #087b9b;
   border-color: #68d8f5;
-  color: #a4eafa;
+  color: #fff;
+  box-shadow: 0 0 0 2px #68d8f555;
 }
 body[data-theme="dark"] .settings-link {
   border-top-color: #34415d;
