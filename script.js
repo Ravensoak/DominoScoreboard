@@ -252,7 +252,7 @@ function renderGameResults(){
     backdrop.hidden = true;
     return;
   }
-  const results = scoreRows().sort((a,b)=>b.total-a.total || a.name.localeCompare(b.name));
+  const results = scoreRows().sort((a,b)=>b.total-a.total || a.playerIndex-b.playerIndex);
   const resultKey = results.map(result=>`${result.id}:${result.total}`).join("|");
   if(state.resultsDismissedFor === resultKey) return;
 
@@ -278,7 +278,7 @@ function renderGameResults(){
 }
 
 function returnToScoreboard(){
-  const results = scoreRows().sort((a,b)=>b.total-a.total || a.name.localeCompare(b.name));
+  const results = scoreRows().sort((a,b)=>b.total-a.total || a.playerIndex-b.playerIndex);
   state.resultsDismissedFor = results.map(result=>`${result.id}:${result.total}`).join("|");
   document.getElementById("resultsBackdrop").hidden = true;
   save();
@@ -307,11 +307,7 @@ function renderStandings(){
     el.innerHTML = '<div class="empty">No players yet — go to the Players section to add.</div>';
     return;
   }
-  const sorted = scoreRows(true).sort((a,b)=>
-    (state.gameType === "individual" || (state.gameType === "team" && !state.hasScoredOnce))
-      ? a.playerIndex-b.playerIndex
-      : b.total-a.total || a.playerIndex-b.playerIndex
-  );
+  const sorted = scoreRows(true).sort((a,b)=>b.total-a.total || a.playerIndex-b.playerIndex);
   const high = Math.max(...sorted.map(row=>row.total));
   const activeTurnId = activeScorecardPlayerId();
   el.innerHTML = sorted.map((pl,i)=>{
