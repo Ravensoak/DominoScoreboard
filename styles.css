@@ -64,9 +64,14 @@ header h1 .pip {
   flex: 0 0 auto;
 }
 .target {
-  margin-left: auto;
+  flex-basis: 100%;
+  margin-left: 0;
   font-size: 13px;
   color: var(--muted);
+  text-align: right;
+}
+#newGameBtn {
+  margin-left: auto;
 }
 .target b {
   color: var(--bad);
@@ -1776,7 +1781,10 @@ body[data-theme="dark"] header {
 body[data-theme="dark"] .target {
   color: #a6b2cc;
 }
-body[data-theme="dark"] .target b {
+body[data-theme="dark"] #newGameBtn {
+  margin-left: auto;
+}
+.target b {
   color: #ff777e;
 }
 body[data-theme="dark"] .card {
@@ -2891,4 +2899,21 @@ body[data-theme="dark"] .result-place {
 }
 @media (prefers-reduced-motion: reduce) {
   .game-status.is-in-progress .game-status-dot { animation: none; }
+}
+
+
+
+
+
+/* Tighten the bottom spacing around round entry cards. */
+#roundEntry {
+  padding-bottom: 8px;
+}
+#roundEntry .player-round .pr-foot {
+  padding-bottom: 6px;
+}
+
+
+#roundEntry .score-pad-section {
+  margin-top: 8px;
 }

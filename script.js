@@ -405,7 +405,7 @@ function renderRoundEntry(){
         </div>
       </div>
       <div class="pr-foot">
-        <span class="hint">${waitingForTeamRoster?'Add 4 players to start':waitingForSecondPlayer?'Add a second player to start':isActive?'Select one score':'Waiting for previous player'}</span>
+        <span class="hint">${waitingForTeamRoster?'Add 4 players to start':waitingForSecondPlayer?'Add a second player to start':isActive?'':'Waiting for previous player'}</span>
       </div>
     </div>`;
   }).join("");
@@ -995,3 +995,4 @@ document.addEventListener("wheel", e=>{ if(e.ctrlKey) e.preventDefault(); }, {pa
 window.addEventListener("keydown", e=>{ if((e.ctrlKey||e.metaKey) && ["+","-","=","0"].includes(e.key)) e.preventDefault(); });
 
 render();
+
