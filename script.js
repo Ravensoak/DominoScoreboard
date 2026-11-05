@@ -304,7 +304,7 @@ function renderStandings(){
     { top:row.getBoundingClientRect().top, total:Number(row.querySelector(".tot").textContent), index }
   ]));
   if(state.players.length === 0){
-    el.innerHTML = '<div class="empty">No players yet — add some at the bottom to start.</div>';
+    el.innerHTML = '<div class="empty">No players yet — go to the Players section to add.</div>';
     return;
   }
   const sorted = scoreRows(true).sort((a,b)=>
