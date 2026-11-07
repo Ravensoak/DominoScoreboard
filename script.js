@@ -388,6 +388,23 @@ function renderStandings(){
   });
 }
 
+function refreshLeaderboardTurnIndicator(){
+  const activeId = state.gameType === "team" ? null : activeScorecardPlayerId();
+  document.querySelectorAll(".prow").forEach(row=>{
+    row.querySelector(".turn-indicator")?.remove();
+    if(row.dataset.playerId !== activeId) return;
+    const playerIndex = state.players.findIndex(player=>player.id===activeId);
+    const indicator = document.createElement("span");
+    indicator.className = "turn-indicator";
+    indicator.style.setProperty("--turn-color",playerColor(playerIndex));
+    indicator.setAttribute("role","img");
+    indicator.setAttribute("aria-label","Current turn to score");
+    indicator.title = "Current turn to score";
+    const name = row.querySelector(".nm");
+    name?.insertBefore(indicator,name.querySelector(".recent-score"));
+  });
+}
+
 function renderRoundEntry(){
   const el = document.getElementById("roundEntry");
   const activePlayerId = scorecardEnabledPlayerId();
@@ -680,6 +697,7 @@ function animateScoreToLeaderboard(score, sourceRect, playerId, previousTotal, n
     if(deferPlayerTurnAnimation){
       deferPlayerTurnAnimation = false;
       animateNextPlayerTurn = true;
+      refreshLeaderboardTurnIndicator();
       renderRoundEntry();
     }
   };
