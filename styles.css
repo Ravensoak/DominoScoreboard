@@ -2876,6 +2876,18 @@ body[data-theme="dark"] .result-place {
   justify-content: flex-start;
   gap: 12px;
 }
+.leaderboard-head,
+.scorecards-head,
+.card:has(#history) > .head,
+.card:has(#groups) > .head {
+  background: #e8f2fb;
+}
+body[data-theme="dark"] .leaderboard-head,
+body[data-theme="dark"] .scorecards-head,
+body[data-theme="dark"] .card:has(#history) > .head,
+body[data-theme="dark"] .card:has(#groups) > .head {
+  background: #202d45;
+}
 .leaderboard-meta {
   display: flex;
   align-items: center;
