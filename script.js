@@ -352,10 +352,11 @@ function renderStandings(){
         <div class="nm" ${state.gameType === "team" ? "" : `onclick="renamePlayer('${pl.id}')" title="tap to rename"`}>
           <span class="player-name-text">${escapeHtml(pl.name)}</span>
           ${isTurn && !deferPlayerTurnAnimation ? `<span class="turn-indicator" style="--turn-color:${playerColor(playerIndex)}" role="img" aria-label="Current turn to score" title="Current turn to score"></span>` : ""}
+          ${change ? `<small class="recent-score">+${change.value}${change.lowest ? '<span>LD</span>' : ''}</small>` : ''}
         </div>
         <div class="barwrap"><div class="bar" style="width:${pct}%"></div></div>
       </div>
-      <div class="tot"><span class="tot-value">${tot}</span>${change ? `<small class="tot-change">+${change.value}${change.lowest ? '<span>LD</span>' : ''}</small>` : ''}</div>
+      <div class="tot"><span class="tot-value">${tot}</span></div>
       <div class="away">${awayHtml}</div>
       ${state.gameType === "team" ? "" : `<div class="x" onclick="deletePlayer('${pl.id}')" title="remove">✕</div>`}
     </div>`;
