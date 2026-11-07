@@ -2951,6 +2951,15 @@ body[data-theme="dark"] .leaderboard-head .target b {
   font-weight: 650;
   white-space: nowrap;
 }
+@media (max-width: 560px) {
+  .leaderboard-meta .game-status {
+    white-space: normal;
+  }
+  #gameStatusText {
+    max-width: 8ch;
+    line-height: 1.15;
+  }
+}
 .game-status-dot {
   width: 8px;
   height: 8px;
