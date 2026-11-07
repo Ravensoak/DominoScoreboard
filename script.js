@@ -945,7 +945,7 @@ const pointsToWinInput = document.getElementById("pointsToWinInput");
 function updateTargetDisplay(){
   targetLbl.textContent = TARGET;
   pointsToWinInput.value = TARGET;
-  document.querySelector(".target").firstChild.textContent = "Points to win ";
+  document.querySelector(".target").firstChild.textContent = "Target ";
 }
 updateTargetDisplay();
 pointsToWinInput.addEventListener("change", ()=>{
