@@ -2877,12 +2877,11 @@ body[data-theme="dark"] .result-place {
   gap: 12px;
 }
 .leaderboard-head .game-status {
-  margin-left: auto;
   padding-right: 4px;
 }
 .leaderboard-head .target {
   flex: 0 1 auto;
-  margin: 0 0 0 8px;
+  margin: 0 0 0 auto;
   padding: 5px 10px 5px 12px;
   display: inline-flex;
   align-items: center;
@@ -2951,7 +2950,6 @@ body[data-theme="dark"] .leaderboard-head .target b {
     gap: 8px 10px;
   }
   .leaderboard-head .target {
-    margin-left: auto;
     padding: 4px 8px;
     gap: 6px;
     font-size: 11px;
