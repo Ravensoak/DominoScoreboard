@@ -400,7 +400,6 @@ function renderRoundEntry(){
       </div>
       <div class="pr-body">
         <div class="score-pad-section">
-          <div class="score-pad-label">Score pads</div>
         <div class="score-pad"><button type="button" class="score-pad-btn score-pad-zero" aria-pressed="false" ${isActive?'':'disabled'} onclick="selectScorePad('${pl.id}',0,this)">0</button>${scorePadBtns}</div>
         </div>
       </div>
