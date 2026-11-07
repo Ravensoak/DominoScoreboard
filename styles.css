@@ -2880,13 +2880,19 @@ body[data-theme="dark"] .result-place {
 .scorecards-head,
 .card:has(#history) > .head,
 .card:has(#groups) > .head {
-  background: #e8f2fb;
+  background: #dcecf8;
 }
 body[data-theme="dark"] .leaderboard-head,
 body[data-theme="dark"] .scorecards-head,
 body[data-theme="dark"] .card:has(#history) > .head,
 body[data-theme="dark"] .card:has(#groups) > .head {
   background: #202d45;
+}
+body:not([data-theme="dark"]) {
+  background: radial-gradient(ellipse at 50% -20%, #ffffff 0%, #fbfdff 55%, #f6f9fd 100%);
+}
+body:not([data-theme="dark"]) .card {
+  box-shadow: 0 12px 30px #25385816, 0 2px 5px #2538580c;
 }
 .leaderboard-meta {
   display: flex;
