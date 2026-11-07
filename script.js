@@ -652,12 +652,9 @@ function animateScoreToLeaderboard(score, sourceRect, playerId, previousTotal, n
     });
     pendingLeaderboardSort = [];
     if(deferPlayerTurnAnimation){
-      const waitForLeaderboard = sourceRect && !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      window.setTimeout(()=>{
-        deferPlayerTurnAnimation = false;
-        renderStandings();
-        renderRoundEntry();
-      },waitForLeaderboard ? 1150 : 0);
+      deferPlayerTurnAnimation = false;
+      animateNextPlayerTurn = true;
+      renderRoundEntry();
     }
   };
   if(!sourceRect || window.matchMedia("(prefers-reduced-motion: reduce)").matches){ finishSort(); return; }

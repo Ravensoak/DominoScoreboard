@@ -2873,8 +2873,50 @@ body[data-theme="dark"] .result-place {
 .leaderboard-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 12px;
+}
+.leaderboard-head .game-status {
+  margin-left: auto;
+  padding-right: 4px;
+}
+.leaderboard-head .target {
+  flex: 0 1 auto;
+  margin: 0 0 0 8px;
+  padding: 5px 10px 5px 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  border: 1px solid #8ccfe3;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #e8f8ff, #c8edfa);
+  color: #164e63;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .25px;
+  text-align: left;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px #1682a21c;
+}
+.leaderboard-head .target b {
+  min-width: 34px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #1682a2;
+  color: #f2fbff;
+  font-size: 15px;
+  line-height: 1.1;
+  text-align: center;
+}
+body[data-theme="dark"] .leaderboard-head .target {
+  border-color: #397e95;
+  background: linear-gradient(135deg, #193e50, #153445);
+  color: #c6efff;
+  box-shadow: 0 2px 10px #0003;
+}
+body[data-theme="dark"] .leaderboard-head .target b {
+  background: #65c7e8;
+  color: #102b37;
 }
 .game-status {
   display: inline-flex;
@@ -2902,6 +2944,26 @@ body[data-theme="dark"] .result-place {
 }
 @media (prefers-reduced-motion: reduce) {
   .game-status.is-in-progress .game-status-dot { animation: none; }
+}
+@media (max-width: 420px) {
+  .leaderboard-head {
+    flex-wrap: wrap;
+    gap: 8px 10px;
+  }
+  .leaderboard-head .target {
+    margin-left: auto;
+    padding: 4px 8px;
+    gap: 6px;
+    font-size: 11px;
+  }
+  .leaderboard-head .target b {
+    min-width: 30px;
+    font-size: 14px;
+  }
+  .leaderboard-head .game-status {
+    flex-basis: 100%;
+    justify-content: flex-end;
+  }
 }
 
 
