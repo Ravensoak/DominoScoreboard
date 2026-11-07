@@ -2876,12 +2876,19 @@ body[data-theme="dark"] .result-place {
   justify-content: flex-start;
   gap: 12px;
 }
+.leaderboard-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+  min-width: 0;
+}
 .leaderboard-head .game-status {
   padding-right: 4px;
 }
 .leaderboard-head .target {
   flex: 0 1 auto;
-  margin: 0 0 0 auto;
+  margin: 0;
   padding: 5px 10px 5px 12px;
   display: inline-flex;
   align-items: center;
@@ -2949,6 +2956,12 @@ body[data-theme="dark"] .leaderboard-head .target b {
     flex-wrap: wrap;
     gap: 8px 10px;
   }
+  .leaderboard-meta {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-left: auto;
+  }
   .leaderboard-head .target {
     padding: 4px 8px;
     gap: 6px;
@@ -2959,8 +2972,7 @@ body[data-theme="dark"] .leaderboard-head .target b {
     font-size: 14px;
   }
   .leaderboard-head .game-status {
-    flex-basis: 100%;
-    justify-content: flex-end;
+    flex: 0 1 auto;
   }
 }
 
