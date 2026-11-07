@@ -154,6 +154,31 @@ function scoreRows(includeCurrent=false){
     };
   });
 }
+function latestLeaderboardChange(row){
+  const ids = row.playerIds || [];
+  const currentEntries = state.currentEntries.filter(entry=>ids.includes(entry.playerId));
+  if(currentEntries.length){
+    return { value:Number(currentEntries[currentEntries.length-1].score||0), lowest:false };
+  }
+  for(let index=state.rounds.length-1;index>=0;index--){
+    const round = state.rounds[index];
+    const turns = (round.turns||[]).filter(turn=>ids.includes(turn.playerId) && !turn.autoZero);
+    if(turns.length){
+      const lowest = ids.some(id=>(round.lowestDominoIds||[]).includes(id));
+      return {
+        value:lowest ? 1 : Number(turns[turns.length-1].score||0),
+        lowest
+      };
+    }
+    const hasRaw = ids.some(id=>Object.prototype.hasOwnProperty.call(round.raw||{},id));
+    if(hasRaw){
+      const lowest = ids.some(id=>(round.lowestDominoIds||[]).includes(id));
+      const value = lowest ? 1 : Number(round.raw[ids.find(id=>Object.prototype.hasOwnProperty.call(round.raw||{},id))]||0);
+      return {value,lowest};
+    }
+  }
+  return null;
+}
 function highestTotal(){
   const rows = scoreRows();
   return rows.length ? Math.max(...rows.map(row=>row.total)) : 0;
@@ -301,7 +326,7 @@ function renderStandings(){
   const el = document.getElementById("standings");
   const previousRows = new Map([...el.querySelectorAll(".prow")].map((row,index)=>[
     row.dataset.playerId,
-    { top:row.getBoundingClientRect().top, total:Number(row.querySelector(".tot").textContent), index }
+    { top:row.getBoundingClientRect().top, total:Number(row.querySelector(".tot-value").textContent), index }
   ]));
   if(state.players.length === 0){
     el.innerHTML = '<div class="empty">No players yet — go to the Players section to add.</div>';
@@ -318,6 +343,7 @@ function renderStandings(){
     const isTurn = state.gameType !== "team" && pl.id === activeTurnId;
     const isOut = tot >= TARGET;
     const pct = Math.min(100, tot/TARGET*100);
+    const change = latestLeaderboardChange(pl);
     const awayHtml = isOut ? '<b>OVER '+TARGET+'</b>'
                            : '<b>'+room+'</b><br>to '+TARGET;
     return `<div class="prow ${isOut?'out':''} ${isLead?'lead':''} ${(!isOut&&room<=20&&!isLead)?'danger':''}" data-player-id="${pl.id}" style="--player-color:${playerColor(playerIndex)}">
@@ -329,7 +355,7 @@ function renderStandings(){
         </div>
         <div class="barwrap"><div class="bar" style="width:${pct}%"></div></div>
       </div>
-      <div class="tot">${tot}</div>
+      <div class="tot"><span class="tot-value">${tot}</span>${change ? `<small class="tot-change">+${change.value}${change.lowest ? '<span>LD</span>' : ''}</small>` : ''}</div>
       <div class="away">${awayHtml}</div>
       ${state.gameType === "team" ? "" : `<div class="x" onclick="deletePlayer('${pl.id}')" title="remove">✕</div>`}
     </div>`;
@@ -340,7 +366,7 @@ function renderStandings(){
     const before = previousRows.get(row.dataset.playerId);
     if(!before) return;
     const afterTop = row.getBoundingClientRect().top;
-    const scoreChanged = before.total !== Number(row.querySelector(".tot").textContent);
+    const scoreChanged = before.total !== Number(row.querySelector(".tot-value").textContent);
     const moved = Math.abs(before.top - afterTop) > 1;
     if(moved && deferLeaderboardSort){
       row.style.transform = `translateY(${before.top-afterTop}px)`;
@@ -630,7 +656,7 @@ function animateScoreToLeaderboard(score, sourceRect, playerId, previousTotal, n
     deferLeaderboardSort = false;
     deferLeaderboardScoreFor = null;
     const scoreRow = document.querySelector(`.prow[data-player-id="${playerId}"]`);
-    const scoreTotal = scoreRow?.querySelector(".tot");
+    const scoreTotal = scoreRow?.querySelector(".tot-value");
     if(scoreTotal){
       scoreTotal.textContent = String(nextTotal);
       scoreRow.classList.remove("score-updated");
@@ -657,7 +683,7 @@ function animateScoreToLeaderboard(score, sourceRect, playerId, previousTotal, n
     }
   };
   if(!sourceRect || window.matchMedia("(prefers-reduced-motion: reduce)").matches){ finishSort(); return; }
-  const total = document.querySelector(`.prow[data-player-id="${playerId}"] .tot`);
+  const total = document.querySelector(`.prow[data-player-id="${playerId}"] .tot-value`);
   if(!total){ finishSort(); return; }
   total.textContent = String(previousTotal);
   const targetRect = total.getBoundingClientRect();
@@ -688,7 +714,7 @@ function selectScorePad(id,v,sourceButton){
   if((state.gameType === "individual" && !state.hasScoredOnce && state.players.length === 1) || id !== scorecardEnabledPlayerId()) return;
   const playerIndex = state.players.findIndex(player=>player.id===id);
   const leaderboardRowId = state.gameType === "team" ? `team-${playerIndex % 2 === 0 ? 1 : 2}` : id;
-  const previousTotal = Number(document.querySelector(`.prow[data-player-id="${leaderboardRowId}"] .tot`)?.textContent || 0);
+  const previousTotal = Number(document.querySelector(`.prow[data-player-id="${leaderboardRowId}"] .tot-value`)?.textContent || 0);
   const sourceRect = sourceButton?.getBoundingClientRect();
   sourceButton?.blur();
   deferLeaderboardSort = true;
