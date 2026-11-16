@@ -1034,6 +1034,40 @@ document.addEventListener("dblclick", e=>e.preventDefault());
 document.addEventListener("touchmove", e=>{ if(e.touches.length > 1) e.preventDefault(); }, {passive:false});
 document.addEventListener("wheel", e=>{ if(e.ctrlKey) e.preventDefault(); }, {passive:false});
 window.addEventListener("keydown", e=>{
+  const dialog = document.getElementById("lowestDominoBack");
+  if(!dialog || dialog.hidden) return;
+
+  // While choosing lowest-domino players, keep every key inside this dialog.
+  e.preventDefault();
+  e.stopImmediatePropagation();
+  const choices = [...dialog.querySelectorAll("#lowestDominoPlayers input[type='checkbox']")];
+  if(["ArrowDown", "ArrowUp", "+", "-"].includes(e.key)){
+    const moveDown = e.key === "ArrowDown" || e.key === "-";
+    const current = choices.indexOf(document.activeElement);
+    const next = current < 0
+      ? (moveDown ? 0 : choices.length - 1)
+      : (current + (moveDown ? 1 : -1) + choices.length) % choices.length;
+    choices[next]?.focus();
+  } else if(e.key === "*"){
+    const current = choices.indexOf(document.activeElement);
+    if(current >= 0) choices[current].click();
+  } else if(e.key === "Enter"){
+    document.getElementById("confirmLowestDomino").click();
+  } else if(e.key === "Backspace"){
+    document.getElementById("cancelLowestDomino").click();
+  }
+}, true);
+window.addEventListener("keydown", e=>{
+  if(e.key === "Escape" && !e.defaultPrevented){
+    const settingsOpen = document.getElementById("settingsMenu")?.open;
+    const dialogOpen = !document.getElementById("lowestDominoBack")?.hidden || !document.getElementById("resultsBackdrop")?.hidden;
+    if(!settingsOpen && !dialogOpen){
+      e.preventDefault();
+      window.location.href = "graph.html";
+      return;
+    }
+  }
+
   if((e.ctrlKey||e.metaKey) && ["+","-","=","0"].includes(e.key)) e.preventDefault();
 
   if(e.key === "Enter" && !e.defaultPrevented && !e.ctrlKey && !e.metaKey && !e.altKey && !e.repeat){

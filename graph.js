@@ -233,6 +233,11 @@ function drawGraph() {
 
 drawGraph();
 window.addEventListener("resize", drawGraph);
+window.addEventListener("keydown", event=>{
+  if(event.key !== "Backspace" || event.ctrlKey || event.metaKey || event.altKey || event.repeat) return;
+  event.preventDefault();
+  window.location.href = "index.html";
+});
 window.addEventListener("storage", event=>{
   if(event.key !== STORE_KEY) return;
   try {
