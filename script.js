@@ -1033,7 +1033,41 @@ document.addEventListener("gestureend",    e=>e.preventDefault());
 document.addEventListener("dblclick", e=>e.preventDefault());
 document.addEventListener("touchmove", e=>{ if(e.touches.length > 1) e.preventDefault(); }, {passive:false});
 document.addEventListener("wheel", e=>{ if(e.ctrlKey) e.preventDefault(); }, {passive:false});
-window.addEventListener("keydown", e=>{ if((e.ctrlKey||e.metaKey) && ["+","-","=","0"].includes(e.key)) e.preventDefault(); });
+window.addEventListener("keydown", e=>{
+  if((e.ctrlKey||e.metaKey) && ["+","-","=","0"].includes(e.key)) e.preventDefault();
+
+  if(e.key === "Enter" && !e.defaultPrevented && !e.ctrlKey && !e.metaKey && !e.altKey && !e.repeat){
+    const target = e.target;
+    const isTextEntry = target instanceof HTMLElement && target.matches("input, textarea, select, [contenteditable='true']");
+    const endRoundButton = document.getElementById("endRoundBtn");
+    const dialogOpen = !document.getElementById("lowestDominoBack")?.hidden;
+    if(!isTextEntry && !dialogOpen && endRoundButton && !endRoundButton.hidden && !endRoundButton.disabled){
+      e.preventDefault();
+      endRoundButton.click();
+      return;
+    }
+  }
+
+  if(e.key === "Backspace" && !e.defaultPrevented && !e.ctrlKey && !e.metaKey && !e.altKey && !e.repeat){
+    const target = e.target;
+    const isTextEntry = target instanceof HTMLElement && target.matches("input, textarea, select, [contenteditable='true']");
+    const undoButton = document.getElementById("scorecardUndo");
+    if(!isTextEntry && undoButton && !undoButton.disabled){
+      e.preventDefault();
+      undoButton.click();
+      return;
+    }
+  }
+
+  // Bluetooth keyboards send ordinary keyboard events. Route a digit to the
+  // matching enabled score pad button, and leave unmatched keys alone.
+  if(e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey || e.repeat || !/^\d$/.test(e.key)) return;
+  const scoreButton = [...document.querySelectorAll("#roundEntry .score-pad-btn:not(:disabled)")]
+    .find(button=>button.textContent.trim() === e.key);
+  if(!scoreButton) return;
+  e.preventDefault();
+  scoreButton.click();
+});
 
 render();
 
