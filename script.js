@@ -1094,7 +1094,7 @@ window.addEventListener("keydown", e=>{
 
   // Bluetooth keyboards send ordinary keyboard events. Route a digit to the
   // matching enabled score pad button, and leave unmatched keys alone.
-  if(e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey || e.repeat || !/^\d$/.test(e.key)) return;
+  if(document.getElementById("settingsMenu")?.open || e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey || e.repeat || !/^\d$/.test(e.key)) return;
   const scoreButton = [...document.querySelectorAll("#roundEntry .score-pad-btn:not(:disabled)")]
     .find(button=>button.textContent.trim() === e.key);
   if(!scoreButton) return;
