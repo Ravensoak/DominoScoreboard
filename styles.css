@@ -2939,6 +2939,11 @@ body[data-theme="dark"] .leaderboard-zoom { border-color: #52647d; }
 #standings.leaderboard-zoomed .recent-score { font-size: 20px; }
 #standings.leaderboard-zoomed .recent-score span { font-size: 18px; }
 #standings.leaderboard-zoomed .tot-value { font-size: 56px; }
+#standings.leaderboard-zoomed .barwrap { height: 10px; }
+@media (max-width: 560px) {
+  #standings .prow > div:nth-child(2) { flex: 0 1 auto !important; }
+  #standings .prow .tot { margin-left: auto; }
+}
 .leaderboard-head,
 .scorecards-head,
 .card:has(#history) > .head,
