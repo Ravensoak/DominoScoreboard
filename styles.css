@@ -2904,6 +2904,15 @@ body[data-theme="dark"] .result-place {
 .leaderboard-zoom:hover { filter: brightness(.96); }
 body[data-theme="dark"] .leaderboard-zoom { border-color: #52647d; }
 #standings.leaderboard-zoomed .player-name-text { font-size: 40px; }
+#standings.leaderboard-zoomed .prow .away,
+#standings.leaderboard-zoomed .prow .x {
+  display: none;
+}
+#standings.leaderboard-zoomed .prow .tot {
+  flex: 0 0 auto;
+  margin-left: auto;
+  text-align: right;
+}
 #standings.leaderboard-zoomed .turn-indicator {
   width: 14px;
   height: 14px;
