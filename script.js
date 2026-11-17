@@ -206,7 +206,8 @@ function render(){
 }
 
 function updateGameStatus(){
-  const inProgress = state.hasScoredOnce;
+  const complete = gameOver();
+  const inProgress = state.hasScoredOnce && !complete;
   const waitingForPlayers = !inProgress && (
     state.players.length === 0 ||
     (state.gameType === "individual" && state.players.length === 1) ||
@@ -216,7 +217,7 @@ function updateGameStatus(){
   const label = document.getElementById("gameStatusText");
   if(!status || !label) return;
   status.classList.toggle("is-in-progress", inProgress);
-  label.textContent = inProgress ? "Game in Progress" : waitingForPlayers ? "Awaiting Players" : "Ready to Start";
+  label.textContent = complete ? "Game Complete" : inProgress ? "Game in Progress" : waitingForPlayers ? "Awaiting Players" : "Ready to Start";
   status.title = waitingForPlayers
     ? state.gameType === "team" ? "Team games needs 4 players" : "Individual games needs a minimum of 2 players"
     : "";
@@ -244,8 +245,10 @@ function restoreScorecardSnapshot(snapshot){
   state.roundStarterId = snapshot.roundStarterId;
 }
 function updateScorecardHistoryControls(){
-  document.getElementById("scorecardUndo").disabled = scorecardUndoStack.length === 0;
-  document.getElementById("scorecardRedo").disabled = scorecardRedoStack.length === 0;
+  const undoDisabled = scorecardUndoStack.length === 0;
+  const redoDisabled = scorecardRedoStack.length === 0;
+  document.getElementById("scorecardUndo").disabled = undoDisabled;
+  document.getElementById("scorecardRedo").disabled = redoDisabled;
 }
 function undoScorecardAction(){
   if(scorecardUndoStack.length === 0) return;
@@ -306,6 +309,7 @@ function returnToScoreboard(){
   const results = scoreRows().sort((a,b)=>b.total-a.total || a.playerIndex-b.playerIndex);
   state.resultsDismissedFor = results.map(result=>`${result.id}:${result.total}`).join("|");
   document.getElementById("resultsBackdrop").hidden = true;
+  updateScorecardHistoryControls();
   save();
   document.getElementById("standings").scrollIntoView({behavior:"smooth",block:"start"});
 }
@@ -407,6 +411,7 @@ function refreshLeaderboardTurnIndicator(){
 function renderRoundEntry(){
   const el = document.getElementById("roundEntry");
   const activePlayerId = scorecardEnabledPlayerId();
+  const gameFinished = gameOver();
   const waitingForSecondPlayer = state.gameType === "individual" && !state.hasScoredOnce && state.players.length === 1;
   const waitingForTeamRoster = state.gameType === "team" && state.players.length < 4;
   const showAllCards = !state.hasScoredOnce;
@@ -430,8 +435,8 @@ function renderRoundEntry(){
   el.innerHTML = visiblePlayers.map(pl=>{
     const index = state.players.indexOf(pl);
     const headerColor = playerColor(index);
-    const isActive = pl.id === activePlayerId && !waitingForSecondPlayer;
-    const isLocked = pl.id !== activePlayerId || waitingForSecondPlayer;
+    const isActive = pl.id === activePlayerId && !waitingForSecondPlayer && !gameFinished;
+    const isLocked = pl.id !== activePlayerId || waitingForSecondPlayer || gameFinished;
     const scorePadBtns = [1,2,3,4,6,8].map(v=>
       `<button type="button" class="score-pad-btn" aria-pressed="false" ${isActive?'':'disabled'} onclick="selectScorePad('${pl.id}',${v},this)">${v}</button>`
     ).join("");
@@ -447,7 +452,7 @@ function renderRoundEntry(){
         </div>
       </div>
       <div class="pr-foot">
-        <span class="hint">${waitingForTeamRoster?'Add 4 players to start':waitingForSecondPlayer?'Add a second player to start':isActive?'':'Waiting for previous player'}</span>
+        <span class="hint">${gameFinished?'Game complete':waitingForTeamRoster?'Add 4 players to start':waitingForSecondPlayer?'Add a second player to start':isActive?'':'Waiting for previous player'}</span>
       </div>
     </div>`;
   }).join("");
@@ -729,6 +734,7 @@ function animateScoreToLeaderboard(score, sourceRect, playerId, previousTotal, n
   };
 }
 function selectScorePad(id,v,sourceButton){
+  if(gameOver()) return;
   if((state.gameType === "individual" && !state.hasScoredOnce && state.players.length === 1) || id !== scorecardEnabledPlayerId()) return;
   const playerIndex = state.players.findIndex(player=>player.id===id);
   const leaderboardRowId = state.gameType === "team" ? `team-${playerIndex % 2 === 0 ? 1 : 2}` : id;
