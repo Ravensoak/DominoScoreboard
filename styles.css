@@ -3103,6 +3103,9 @@ body[data-theme="dark"] #roundEntry .player-round {
   box-shadow: 0 2px 6px #0002;
 }
 .prow .tot {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
   line-height: 1;
 }
 .prow .tot-value {
