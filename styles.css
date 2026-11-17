@@ -129,6 +129,15 @@ section {
   border-radius: 16px;
   overflow: hidden;
 }
+.card:has(.leaderboard-head),
+.card:has(.scorecards-head),
+.card:has(#history),
+.card:has(#groups) {
+  border-radius: 8px;
+}
+.graph-main .card {
+  border-radius: 9px;
+}
 .card .head {
   padding: 11px 14px;
   border-bottom: 1px solid var(--line);
@@ -2058,7 +2067,7 @@ body[data-theme="dark"] .instructions-header h1 {
   gap: 7px;
   padding: 8px;
   border: 1px solid color-mix(in srgb, var(--line) 72%, transparent);
-  border-radius: 12px;
+  border-radius: 6px;
   background: color-mix(in srgb, var(--panel) 48%, transparent);
 }
 .score-pad-btn {
@@ -2282,7 +2291,7 @@ body[data-theme="dark"] .cbtn:active {
 .player-round {
   background: linear-gradient(145deg, #fff, #f7f9fc);
   border: 1px solid #ccd7e5;
-  border-radius: 17px;
+  border-radius: 8.5px;
   box-shadow:
     0 5px 16px #25385812,
     0 1px 3px #2538580d;
@@ -2876,16 +2885,53 @@ body[data-theme="dark"] .result-place {
   justify-content: flex-start;
   gap: 12px;
 }
+.leaderboard-zoom {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid #9bb0c5;
+  border-radius: 9px;
+  background: var(--card, #fff);
+  color: var(--text, #183047);
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+.leaderboard-zoom:hover { filter: brightness(.96); }
+body[data-theme="dark"] .leaderboard-zoom { border-color: #52647d; }
+#standings.leaderboard-zoomed .player-name-text { font-size: 40px; }
+#standings.leaderboard-zoomed .turn-indicator {
+  width: 14px;
+  height: 14px;
+  flex-basis: 14px;
+  animation: turnIndicatorPulseZoom 1.15s ease-out infinite;
+}
+@keyframes turnIndicatorPulseZoom {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--turn-color) 75%, transparent); }
+  70%, 100% { box-shadow: 0 0 0 12px color-mix(in srgb, var(--turn-color) 0%, transparent); }
+}
+@media (prefers-reduced-motion: reduce) {
+  #standings.leaderboard-zoomed .turn-indicator { animation: none; }
+}
+#standings.leaderboard-zoomed .recent-score { font-size: 20px; }
+#standings.leaderboard-zoomed .recent-score span { font-size: 18px; }
+#standings.leaderboard-zoomed .tot-value { font-size: 56px; }
 .leaderboard-head,
 .scorecards-head,
 .card:has(#history) > .head,
-.card:has(#groups) > .head {
+.card:has(#groups) > .head,
+.graph-main .card > .head {
   background: #dcecf8;
 }
 body[data-theme="dark"] .leaderboard-head,
 body[data-theme="dark"] .scorecards-head,
 body[data-theme="dark"] .card:has(#history) > .head,
-body[data-theme="dark"] .card:has(#groups) > .head {
+body[data-theme="dark"] .card:has(#groups) > .head,
+body[data-theme="dark"] .graph-main .card > .head {
   background: #202d45;
 }
 body:not([data-theme="dark"]) {
