@@ -63,86 +63,93 @@ function drawGraph() {
         return {id:`team-${teamIndex+1}`,name:members.length ? members.map(player=>player.name).join(" & ") : `Team ${teamIndex+1}`,members,index:indexes[0]};
       })
     : players.map((player,index)=>({id:player.id,name:player.name,members:[player],index}));
-  const series = graphPlayers.map(({name,members,index}, seriesIndex) => {
-    const memberIds = new Set(members.map(player=>player.id));
-    let total = 0;
-    const values = [{ round: 0, roundNumber: 0, total: 0 }];
-    rounds.forEach((round, roundIndex) => {
-      const startTotal = total;
-      if (Array.isArray(round.turns) && round.turns.length) {
-        const turnsPerRow = Math.max(players.length, 1);
-        const rowCount = Math.ceil(round.turns.length / turnsPerRow);
-        for (let rowIndex = 0; rowIndex < rowCount; rowIndex++) {
-          const rowTurns = round.turns.slice(rowIndex * turnsPerRow, (rowIndex + 1) * turnsPerRow);
-          const rowScore = rowTurns
-            .filter(turn => memberIds.has(turn.playerId))
-            .reduce((sum, turn) => sum + Number(turn.score || 0), 0);
-          total += rowScore;
-          values.push({
-            round: roundIndex + (rowIndex + 1) / (rowCount + 1),
-            roundNumber: roundIndex + 1,
-            total,
-            scoreDelta: rowScore,
-            autoZero: rowTurns.some(turn => memberIds.has(turn.playerId) && turn.autoZero === true)
-          });
-        }
-        if (round.lowestDominoIds?.some(id=>memberIds.has(id))) {
-          const bonus = round.lowestDominoIds.filter(id=>memberIds.has(id)).length;
-          total += bonus;
-          values.push({
-            round: roundIndex + 1,
-            roundNumber: roundIndex + 1,
-            total,
-            scoreDelta: bonus,
-            lowestDomino: true
-          });
-        }
-      } else {
-        const scoreDelta = members.reduce((sum,player)=>sum+Number(round.scores?.[player.id]||0),0);
-        total += scoreDelta;
-        values.push({ round: roundIndex + 1, roundNumber: roundIndex + 1, total, scoreDelta });
-      }
-      const expectedTotal = startTotal + members.reduce((sum,player)=>sum+Number(round.scores?.[player.id]||0),0);
-      if (Math.abs(total - expectedTotal) > 0.0001) {
-        const scoreDelta = expectedTotal - total;
-        total = expectedTotal;
-        values.push({ round: roundIndex + 1, roundNumber: roundIndex + 1, total, scoreDelta, roundEnd:true });
-      } else {
-        const lastPoint = values[values.length - 1];
-        if (lastPoint.round < roundIndex + 1) {
-          values.push({
-            round: roundIndex + 1,
-            roundNumber: roundIndex + 1,
-            total: expectedTotal,
-            scoreDelta: expectedTotal - startTotal,
-            roundEnd:true
-          });
-        } else {
-          lastPoint.roundEnd = true;
-        }
-      }
-    });
-    const turnsPerRow = Math.max(players.length, 1);
-    const currentRowCount = Math.ceil(currentEntries.length / turnsPerRow);
-    for (let rowIndex = 0; rowIndex < currentRowCount; rowIndex++) {
-      const rowEntries = currentEntries.slice(rowIndex * turnsPerRow, (rowIndex + 1) * turnsPerRow);
-      const rowScore = rowEntries
-        .filter(entry => memberIds.has(entry.playerId))
-        .reduce((sum, entry) => sum + Number(entry.score || 0), 0);
-      total += rowScore;
-      values.push({
-        round: rounds.length + (rowIndex + 1) / (currentRowCount + 1),
-        roundNumber: rounds.length + 1,
-        total,
-        scoreDelta: rowScore
+  const series = graphPlayers.map(({name,members,index}) => ({
+    name,
+    index,
+    color: colorFor(index),
+    memberIds: new Set(members.map(player=>player.id)),
+    total: 0,
+    values: [{ round: 0, roundNumber: 0, total: 0 }]
+  }));
+  let turnAxisCount = 0;
+  const roundMarkerPositions = [];
+  const roundLabelRanges = [];
+  const addTurnPoint = (round, roundNumber, entries, lowestDominoIds=null) => {
+    series.forEach(item=>{
+      const matchingEntries = entries.filter(entry=>item.memberIds.has(entry.playerId));
+      const appliesToSeries = lowestDominoIds
+        ? true
+        : matchingEntries.length > 0;
+      if(!appliesToSeries) return;
+      const scoreDelta = lowestDominoIds
+        ? lowestDominoIds.filter(id=>item.memberIds.has(id)).length
+        : matchingEntries.reduce((sum,entry)=>sum+Number(entry.score ?? 0),0);
+      item.total += scoreDelta;
+      item.values.push({
+        round,
+        roundNumber,
+        total: item.total,
+        scoreDelta,
+        eventName: lowestDominoIds ? "Lowest domino" : matchingEntries.map(entry=>entry.name).join(" & "),
+        eventScore: scoreDelta,
+        autoZero: matchingEntries.length > 0 && matchingEntries.every(entry=>entry.autoZero === true),
+        turn: !lowestDominoIds,
+        lowestDomino: Boolean(lowestDominoIds)
       });
+    });
+  };
+  rounds.forEach((round, roundIndex)=>{
+    const hasTurns = Array.isArray(round.turns) && round.turns.length > 0;
+    const turnRows = [];
+    if(hasTurns){
+      const turnsPerRow = Math.max(players.length,1);
+      for(let start=0;start<round.turns.length;start+=turnsPerRow){
+        turnRows.push(round.turns.slice(start,start+turnsPerRow).map(turn=>({
+          playerId:turn.playerId,
+          score:Number(turn.score ?? 0),
+          name:players.find(player=>player.id===turn.playerId)?.name || "Player",
+          autoZero:turn.autoZero === true
+        })));
+      }
+    } else {
+      const rowScores = round.lowestDominoIds?.length ? (round.raw || round.scores) : round.scores;
+      turnRows.push(players.map(player=>({playerId:player.id,score:Number(rowScores?.[player.id] ?? 0),name:player.name})));
     }
-    return { name, index, color: colorFor(index), values };
+    const hasBonusRow = Boolean(round.lowestDominoIds?.length);
+    const roundStart = turnAxisCount;
+    turnRows.forEach(entries=>{
+      const position = ++turnAxisCount;
+      addTurnPoint(position,roundIndex + 1,entries);
+    });
+    if(hasBonusRow){
+      const position = ++turnAxisCount;
+      addTurnPoint(position,roundIndex + 1,[],round.lowestDominoIds);
+    }
+    roundMarkerPositions.push(turnAxisCount);
+    roundLabelRanges.push({start:roundStart,end:turnAxisCount,roundNumber:roundIndex + 1});
   });
+  if(currentEntries.length){
+    const turnsPerRow = Math.max(players.length,1);
+    const currentRows = [];
+    for(let start=0;start<currentEntries.length;start+=turnsPerRow){
+      currentRows.push(currentEntries.slice(start,start+turnsPerRow).map(entry=>({
+        playerId:entry.playerId,
+        score:Number(entry.score ?? 0),
+        name:players.find(player=>player.id===entry.playerId)?.name || "Player"
+      })));
+    }
+    const currentRoundStart = turnAxisCount;
+    currentRows.forEach(entries=>{
+      const position = ++turnAxisCount;
+      addTurnPoint(position,rounds.length + 1,entries);
+    });
+    roundLabelRanges.push({start:currentRoundStart,end:turnAxisCount,roundNumber:rounds.length + 1});
+  }
+  series.forEach(item=>delete item.memberIds);
 
   summary.textContent = currentEntries.length
-    ? `${rounds.length} completed round${rounds.length === 1 ? "" : "s"}; ${currentEntries.length} score entr${currentEntries.length === 1 ? "y" : "ies"} in round ${rounds.length + 1}.`
-    : `${rounds.length} completed round${rounds.length === 1 ? "" : "s"}; markers show ${gameState?.gameType === "team" ? "team" : "individual player"} scores.`;
+    ? `${rounds.length} completed round${rounds.length === 1 ? "" : "s"}; markers show each turn, including current entries in round ${rounds.length + 1}.`
+    : `${rounds.length} completed round${rounds.length === 1 ? "" : "s"}; markers show every turn and cumulative ${gameState?.gameType === "team" ? "team" : "player"} totals.`;
   legend.replaceChildren(...series.map(({ name:seriesName, index, color }) => {
     const item = document.createElement("span");
     item.className = "graph-legend-item";
@@ -171,8 +178,7 @@ function drawGraph() {
   const step = niceStep(maxValue - minValue);
   const yMin = Math.floor(minValue / step) * step;
   const yMax = Math.ceil(maxValue / step) * step || step;
-  const axisRoundCount = rounds.length + (currentEntries.length ? 1 : 0);
-  const xMax = Math.max(axisRoundCount, 1);
+  const xMax = Math.max(turnAxisCount, 1);
   const x = round => margin.left + (round / xMax) * plotWidth;
   const y = value => margin.top + ((yMax - value) / (yMax - yMin)) * plotHeight;
 
@@ -186,9 +192,9 @@ function drawGraph() {
     svg.append(svgElement("text", { x: margin.left - 10, y: yy + 4, "text-anchor": "end" }, formatValue(tick)));
   }
 
-  for (let round = 0; round <= axisRoundCount; round++) {
-    const xx = x(round);
-    const roundEnd = round > 0 && round <= rounds.length;
+  for (let turn = 0; turn <= turnAxisCount; turn++) {
+    const xx = x(turn);
+    const roundEnd = roundMarkerPositions.includes(turn);
     svg.append(svgElement("line", {
       x1: xx,
       y1: margin.top,
@@ -196,14 +202,14 @@ function drawGraph() {
       y2: margin.top + plotHeight,
       class: roundEnd ? "graph-round-boundary" : "graph-gridline"
     }));
-    if (round === 0) {
+    if (turn === 0) {
       svg.append(svgElement("text", { x: xx, y: margin.top + plotHeight + 21, "text-anchor": "middle" }, "Start"));
     }
   }
-  for (let round = 1; round <= axisRoundCount; round++) {
-    const labelX = x(round - 0.5);
-    svg.append(svgElement("text", { x: labelX, y: margin.top + plotHeight + 21, "text-anchor": "middle" }, `Round ${round}`));
-  }
+  roundLabelRanges.forEach(({start,end,roundNumber})=>{
+    const labelX = x((start + end) / 2);
+    svg.append(svgElement("text", { x: labelX, y: margin.top + plotHeight + 21, "text-anchor": "middle" }, `Round ${roundNumber}`));
+  });
 
   svg.append(svgElement("line", { x1: margin.left, y1: margin.top, x2: margin.left, y2: margin.top + plotHeight, class: "graph-axis" }));
   svg.append(svgElement("line", { x1: margin.left, y1: margin.top + plotHeight, x2: width - margin.right, y2: margin.top + plotHeight, class: "graph-axis" }));
@@ -221,9 +227,13 @@ function drawGraph() {
         fill:color,
         class:"graph-point"
       });
-      const change = point.lowestDomino
-        ? "lowest domino bonus +1"
-        : `score ${point.scoreDelta >= 0 ? "+" : ""}${formatValue(point.scoreDelta)}`;
+      const change = point.turn
+        ? point.autoZero
+          ? `${point.eventName} recorded 0; ${seriesName} total ${formatValue(point.total)}`
+          : `turn row ${point.eventName} ${point.eventScore >= 0 ? "+" : ""}${formatValue(point.eventScore)}; ${seriesName} total ${formatValue(point.total)}`
+        : point.lowestDomino
+          ? `${point.scoreDelta ? "lowest domino bonus +1" : "no lowest domino bonus +0"}; ${seriesName} total ${formatValue(point.total)}`
+          : `score ${point.scoreDelta >= 0 ? "+" : ""}${formatValue(point.scoreDelta)}; ${seriesName} total ${formatValue(point.total)}`;
       const label = gameState?.gameType === "team" ? seriesName : `Player ${index + 1} (${seriesName})`;
       marker.append(svgElement("title", {}, `${label}, round ${point.roundNumber}: ${change}; total ${formatValue(point.total)}`));
       svg.append(marker);
