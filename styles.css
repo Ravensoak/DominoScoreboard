@@ -3127,6 +3127,34 @@ body[data-theme="dark"] #roundEntry .player-round {
   font-size: 9px;
   font-weight: 850;
 }
+.prow .rank {
+  width: 28px;
+  height: 28px;
+  border: 1px solid #d4deea;
+  border-radius: 8px;
+  background: linear-gradient(145deg, #fff, #edf2f8);
+  color: #53637a;
+  font-size: 12px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  box-shadow: inset 0 1px 0 #fff;
+}
+.prow.lead .rank {
+  border-color: #21845f;
+  background: linear-gradient(145deg, #31a879, #21845f);
+  color: #fff;
+}
+body[data-theme="dark"] .prow .rank {
+  border-color: #52647d;
+  background: linear-gradient(145deg, #3b4b66, #2f3e57);
+  color: #e2e9f4;
+  box-shadow: inset 0 1px 0 #ffffff12;
+}
+body[data-theme="dark"] .prow.lead .rank {
+  border-color: #52d6a0;
+  background: linear-gradient(145deg, #52d6a0, #31a879);
+  color: #082b20;
+}
 
 
 
