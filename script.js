@@ -748,7 +748,7 @@ function selectScorePad(id,v,sourceButton){
   state.lastScorerId = id;
   const nextTotal = scoreRows(true).find(row=>row.id===leaderboardRowId)?.total ?? previousTotal + score;
   animateNextPlayerTurn = true;
-  if(totalFor(id) + roundScore(id) >= TARGET){
+  if(scoreRows(true).some(row=>row.total >= TARGET)){
     commitRound();
     animateScoreToLeaderboard(score,sourceRect,leaderboardRowId,previousTotal,nextTotal);
     return;
