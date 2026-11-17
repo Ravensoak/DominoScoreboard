@@ -2888,20 +2888,30 @@ body[data-theme="dark"] .result-place {
 .leaderboard-zoom {
   display: inline-grid;
   place-items: center;
-  flex: 0 0 25.5px;
-  width: 25.5px;
-  height: 25.5px;
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
   padding: 0;
   border: 1px solid #9bb0c5;
-  border-radius: 6.75px;
+  border-radius: 9px;
   background: var(--card, #fff);
   color: var(--text, #183047);
-  font-size: 16.5px;
+  font-size: 22px;
   font-weight: 700;
   line-height: 1;
   cursor: pointer;
 }
 .leaderboard-zoom:hover { filter: brightness(.96); }
+.leaderboard-zoom-icon {
+  width: 21px;
+  height: 21px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.leaderboard-zoom.is-zoomed .zoom-icon-vertical { display: none; }
 body[data-theme="dark"] .leaderboard-zoom { border-color: #52647d; }
 #standings.leaderboard-zoomed .player-name-text { font-size: 40px; }
 #standings.leaderboard-zoomed .prow .away,

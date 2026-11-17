@@ -1107,10 +1107,10 @@ const leaderboardZoomButton = document.getElementById("leaderboardZoom");
 leaderboardZoomButton?.addEventListener("click",()=>{
   const standings = document.getElementById("standings");
   const zoomed = standings.classList.toggle("leaderboard-zoomed");
+  leaderboardZoomButton.classList.toggle("is-zoomed",zoomed);
   leaderboardZoomButton.setAttribute("aria-pressed",String(zoomed));
   leaderboardZoomButton.setAttribute("aria-label",zoomed ? "Zoom back to normal leaderboard text" : "Zoom in on leaderboard text");
   leaderboardZoomButton.title = zoomed ? "Zoom back to normal size" : "Zoom in on leaderboard text";
-  leaderboardZoomButton.querySelector("span").textContent = zoomed ? "−" : "＋";
 });
 
 render();

@@ -90,7 +90,11 @@
   <div class="card">
     <div class="head leaderboard-head"><h2>Leaderboard</h2>
       <button class="leaderboard-zoom" id="leaderboardZoom" type="button" aria-label="Zoom in on leaderboard text" aria-pressed="false" title="Zoom in on leaderboard text">
-        <span aria-hidden="true">＋</span>
+        <svg class="leaderboard-zoom-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <circle cx="10.5" cy="10.5" r="6.5"></circle>
+          <path d="m15.3 15.3 5 5M7.5 10.5h6"></path>
+          <path class="zoom-icon-vertical" d="M10.5 7.5v6"></path>
+        </svg>
       </button>
       <div class="leaderboard-meta">
       <div class="game-status" id="gameStatus" role="status" aria-live="polite">
