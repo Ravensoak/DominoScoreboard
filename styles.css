@@ -3155,6 +3155,82 @@ body[data-theme="dark"] .prow.lead .rank {
   background: linear-gradient(145deg, #52d6a0, #31a879);
   color: #082b20;
 }
+.scorecard-history-controls {
+  gap: 6px;
+}
+.round-number-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 28px;
+  padding: 0 7px;
+  border: 1px solid #1682a2;
+  border-radius: 8px;
+  background: #1682a2;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 850;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+body[data-theme="dark"] .round-number-badge {
+  border-color: #65c7e8;
+  background: #65c7e8;
+  color: #102b37;
+}
+.scorecard-history-controls .btn.small {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 32px;
+  min-width: 76px;
+  padding: 5px 10px;
+  border: 1px solid #c7d7e8;
+  border-radius: 8px;
+  background: #f7faff;
+  color: #36516f;
+  font-size: 12px;
+  font-weight: 700;
+  box-shadow: 0 1px 2px #17253b0b;
+}
+.scorecard-history-controls #scorecardUndo { margin-left: 8px; }
+.history-action-icon {
+  font-size: 20px;
+  line-height: .8;
+}
+.scorecard-history-controls .btn.small:hover:not(:disabled) {
+  border-color: #91b0ce;
+  background: #edf5fc;
+}
+.scorecard-history-controls .btn.small:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--accent2) 48%, transparent);
+  outline-offset: 2px;
+}
+.scorecard-history-controls .btn.small:disabled {
+  opacity: .48;
+}
+body[data-theme="dark"] .scorecard-history-controls .btn.small {
+  border-color: #465a75;
+  background: #26364d;
+  color: #dbe8f7;
+  box-shadow: 0 1px 3px #0003;
+}
+body[data-theme="dark"] .scorecard-history-controls .btn.small:hover:not(:disabled) {
+  border-color: #6685a8;
+  background: #30435d;
+}
+@media (max-width: 560px) {
+  .scorecard-history-controls { gap: 5px; }
+  .scorecard-history-controls .btn.small {
+    min-width: 74px;
+    min-height: 38px;
+    padding: 7px 9px;
+    font-size: 12px;
+  }
+  .history-action-icon { font-size: 22px; }
+}
 
 
 

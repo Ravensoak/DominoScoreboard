@@ -199,7 +199,7 @@ function render(){
   document.getElementById("newPlayerName").disabled = playerLimitReached;
   document.getElementById("addPlayerBtn").disabled = playerLimitReached;
   document.getElementById("newPlayerName").placeholder = playerLimitReached ? "Maximum 4 players" : "Add player name…";
-  document.getElementById("roundTitle").textContent = "Round " + (state.rounds.length + 1) + " Scorecards";
+  document.getElementById("roundNumber").textContent = String(state.rounds.length + 1);
   document.getElementById("endRoundBtn").hidden = !state.hasScoredOnce;
   updateScorecardHistoryControls();
   save();
