@@ -2941,8 +2941,10 @@ body[data-theme="dark"] .leaderboard-zoom { border-color: #52647d; }
 #standings.leaderboard-zoomed .tot-value { font-size: 56px; }
 #standings.leaderboard-zoomed .barwrap { height: 10px; }
 @media (max-width: 560px) {
+  #standings .prow { gap: 6px; }
   #standings .prow > div:nth-child(2) { flex: 0 1 auto !important; }
   #standings .prow .tot { margin-left: auto; }
+  #standings .prow .away { width: 58px; flex: 0 0 58px; }
 }
 .leaderboard-head,
 .scorecards-head,
