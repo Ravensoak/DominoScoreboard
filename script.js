@@ -200,7 +200,9 @@ function render(){
   document.getElementById("addPlayerBtn").disabled = playerLimitReached;
   document.getElementById("newPlayerName").placeholder = playerLimitReached ? "Maximum 4 players" : "Add player name…";
   document.getElementById("roundNumber").textContent = String(state.rounds.length + 1);
-  document.getElementById("endRoundBtn").hidden = !state.hasScoredOnce;
+  const endRoundButton = document.getElementById("endRoundBtn");
+  endRoundButton.hidden = !state.hasScoredOnce;
+  endRoundButton.disabled = gameOver();
   updateScorecardHistoryControls();
   save();
 }
