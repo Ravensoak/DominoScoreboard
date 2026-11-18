@@ -203,6 +203,8 @@ function render(){
   const endRoundButton = document.getElementById("endRoundBtn");
   endRoundButton.hidden = !state.hasScoredOnce;
   endRoundButton.disabled = gameOver();
+  const endRoundKeyHint = document.getElementById("endRoundKeyHint");
+  endRoundKeyHint.hidden = !state.hasScoredOnce || gameOver();
   updateScorecardHistoryControls();
   save();
 }
@@ -1065,6 +1067,18 @@ window.addEventListener("keydown", e=>{
   }
 }, true);
 window.addEventListener("keydown", e=>{
+  if(e.key === "/" && !e.defaultPrevented && !e.ctrlKey && !e.metaKey && !e.altKey && !e.repeat){
+    const target = e.target;
+    const isTextEntry = target instanceof HTMLElement && target.matches("input, textarea, select, [contenteditable='true']");
+    const settingsOpen = document.getElementById("settingsMenu")?.open;
+    const dialogOpen = !document.getElementById("lowestDominoBack")?.hidden || !document.getElementById("resultsBackdrop")?.hidden;
+    if(!isTextEntry && !settingsOpen && !dialogOpen){
+      e.preventDefault();
+      window.location.href = "graph.html";
+      return;
+    }
+  }
+
   if(e.key === "Escape" && !e.defaultPrevented){
     const settingsOpen = document.getElementById("settingsMenu")?.open;
     const dialogOpen = !document.getElementById("lowestDominoBack")?.hidden || !document.getElementById("resultsBackdrop")?.hidden;
@@ -1077,12 +1091,13 @@ window.addEventListener("keydown", e=>{
 
   if((e.ctrlKey||e.metaKey) && ["+","-","=","0"].includes(e.key)) e.preventDefault();
 
-  if(e.key === "Enter" && !e.defaultPrevented && !e.ctrlKey && !e.metaKey && !e.altKey && !e.repeat){
+  if(e.key === "Clear" && !e.defaultPrevented && !e.ctrlKey && !e.metaKey && !e.altKey && !e.repeat){
     const target = e.target;
     const isTextEntry = target instanceof HTMLElement && target.matches("input, textarea, select, [contenteditable='true']");
+    const settingsOpen = document.getElementById("settingsMenu")?.open;
+    const dialogOpen = !document.getElementById("lowestDominoBack")?.hidden || !document.getElementById("resultsBackdrop")?.hidden;
     const endRoundButton = document.getElementById("endRoundBtn");
-    const dialogOpen = !document.getElementById("lowestDominoBack")?.hidden;
-    if(!isTextEntry && !dialogOpen && endRoundButton && !endRoundButton.hidden && !endRoundButton.disabled){
+    if(!isTextEntry && !settingsOpen && !dialogOpen && endRoundButton && !endRoundButton.hidden && !endRoundButton.disabled){
       e.preventDefault();
       endRoundButton.click();
       return;
