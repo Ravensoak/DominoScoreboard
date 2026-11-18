@@ -4,6 +4,7 @@ const TARGET_KEY = "domino-points-to-win-v1";
 let TARGET = loadTarget();
 const STORE_KEY = "skyjo-state-v1";
 const THEME_KEY = "skyjo-theme-v1";
+const LEADERBOARD_ZOOM_KEY = "domino-leaderboard-zoom-v1";
 const PLAYER_COLORS = ["#1677e8", "#f28c28", "#ffff00", "#000000", "#d83b3b", "#249447"];
 const EXTRA_PLAYER_COLORS = ["#8c52d8", "#168f9a", "#a25e32", "#d450a5"];
 
@@ -1135,13 +1136,19 @@ window.addEventListener("keydown", e=>{
 });
 
 const leaderboardZoomButton = document.getElementById("leaderboardZoom");
-leaderboardZoomButton?.addEventListener("click",()=>{
+function setLeaderboardZoom(zoomed){
   const standings = document.getElementById("standings");
-  const zoomed = standings.classList.toggle("leaderboard-zoomed");
+  standings.classList.toggle("leaderboard-zoomed",zoomed);
   leaderboardZoomButton.classList.toggle("is-zoomed",zoomed);
   leaderboardZoomButton.setAttribute("aria-pressed",String(zoomed));
   leaderboardZoomButton.setAttribute("aria-label",zoomed ? "Zoom back to normal leaderboard text" : "Zoom in on leaderboard text");
   leaderboardZoomButton.title = zoomed ? "Zoom back to normal size" : "Zoom in on leaderboard text";
+}
+setLeaderboardZoom(localStorage.getItem(LEADERBOARD_ZOOM_KEY) === "true");
+leaderboardZoomButton?.addEventListener("click",()=>{
+  const zoomed = !document.getElementById("standings").classList.contains("leaderboard-zoomed");
+  localStorage.setItem(LEADERBOARD_ZOOM_KEY,String(zoomed));
+  setLeaderboardZoom(zoomed);
 });
 
 render();
