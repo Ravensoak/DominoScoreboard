@@ -2948,7 +2948,7 @@ body[data-theme="dark"] .leaderboard-zoom { border-color: #52647d; }
   #standings .prow .away { width: 58px; flex: 0 0 58px; }
 }
 .card .head {
-  background: #53677b;
+  background: #65798d;
 }
 .card .head h2,
 .leaderboard-head .game-status,
@@ -2960,7 +2960,7 @@ body[data-theme="dark"] .leaderboard-zoom { border-color: #52647d; }
   border-color: #ffffff66;
 }
 body[data-theme="dark"] .card .head {
-  background: #35465a;
+  background: #46576b;
 }
 body[data-theme="dark"] .card .head h2 {
   color: #f4f6f8;
