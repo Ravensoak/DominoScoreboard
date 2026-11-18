@@ -203,8 +203,6 @@ function render(){
   const endRoundButton = document.getElementById("endRoundBtn");
   endRoundButton.hidden = !state.hasScoredOnce;
   endRoundButton.disabled = gameOver();
-  const endRoundKeyHint = document.getElementById("endRoundKeyHint");
-  endRoundKeyHint.hidden = !state.hasScoredOnce || gameOver();
   updateScorecardHistoryControls();
   save();
 }
@@ -933,7 +931,6 @@ function closeLowestDominoDialog(){
   const back = document.getElementById("lowestDominoBack");
   back.classList.remove("show");
   back.hidden = true;
-  document.getElementById("endRoundBtn").focus();
 }
 function confirmLowestDominoRound(){
   const selectedIds = [...document.querySelectorAll("#lowestDominoPlayers input:checked")]
