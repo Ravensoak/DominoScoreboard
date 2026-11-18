@@ -244,7 +244,7 @@ function drawGraph() {
 drawGraph();
 window.addEventListener("resize", drawGraph);
 window.addEventListener("keydown", event=>{
-  if(event.key !== "Backspace" || event.ctrlKey || event.metaKey || event.altKey || event.repeat) return;
+  if(!["Enter","Return","Backspace"].includes(event.key) || event.ctrlKey || event.metaKey || event.altKey || event.repeat) return;
   event.preventDefault();
   window.location.href = "index.html";
 });

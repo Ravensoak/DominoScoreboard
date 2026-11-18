@@ -1065,6 +1065,20 @@ window.addEventListener("keydown", e=>{
   }
 }, true);
 window.addEventListener("keydown", e=>{
+  const resultsDialogOpen = !document.getElementById("resultsBackdrop")?.hidden;
+  if(resultsDialogOpen && !e.defaultPrevented && !e.ctrlKey && !e.metaKey && !e.altKey && !e.repeat){
+    if(e.key === "Enter" || e.key === "Return"){
+      e.preventDefault();
+      document.getElementById("returnToScoreboard").click();
+      return;
+    }
+    if(e.key === "/"){
+      e.preventDefault();
+      window.location.href = "graph.html";
+      return;
+    }
+  }
+
   if(e.key === "/" && !e.defaultPrevented && !e.ctrlKey && !e.metaKey && !e.altKey && !e.repeat){
     const target = e.target;
     const isTextEntry = target instanceof HTMLElement && target.matches("input, textarea, select, [contenteditable='true']");
