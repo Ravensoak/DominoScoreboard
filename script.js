@@ -1088,6 +1088,18 @@ window.addEventListener("keydown", e=>{
 
   if((e.ctrlKey||e.metaKey) && ["+","-","=","0"].includes(e.key)) e.preventDefault();
 
+  if((e.key === "+" || e.key === "-") && !e.defaultPrevented && !e.ctrlKey && !e.metaKey && !e.altKey){
+    const target = e.target;
+    const isTextEntry = target instanceof HTMLElement && target.matches("input, textarea, select, [contenteditable='true']");
+    const settingsOpen = document.getElementById("settingsMenu")?.open;
+    const dialogOpen = !document.getElementById("lowestDominoBack")?.hidden || !document.getElementById("resultsBackdrop")?.hidden;
+    if(!isTextEntry && !settingsOpen && !dialogOpen){
+      e.preventDefault();
+      window.scrollBy({top:(e.key === "+" ? 1 : -1) * Math.round(window.innerHeight * 0.8), behavior:"smooth"});
+      return;
+    }
+  }
+
   if(e.key === "Clear" && !e.defaultPrevented && !e.ctrlKey && !e.metaKey && !e.altKey && !e.repeat){
     const target = e.target;
     const isTextEntry = target instanceof HTMLElement && target.matches("input, textarea, select, [contenteditable='true']");
