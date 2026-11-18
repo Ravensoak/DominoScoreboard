@@ -2947,19 +2947,23 @@ body[data-theme="dark"] .leaderboard-zoom { border-color: #52647d; }
   #standings .prow .tot { margin-left: auto; }
   #standings .prow .away { width: 58px; flex: 0 0 58px; }
 }
-.leaderboard-head,
-.scorecards-head,
-.card:has(#history) > .head,
-.card:has(#groups) > .head,
-.graph-main .card > .head {
-  background: #dcecf8;
+.card .head {
+  background: #53677b;
 }
-body[data-theme="dark"] .leaderboard-head,
-body[data-theme="dark"] .scorecards-head,
-body[data-theme="dark"] .card:has(#history) > .head,
-body[data-theme="dark"] .card:has(#groups) > .head,
-body[data-theme="dark"] .graph-main .card > .head {
-  background: #202d45;
+.card .head h2,
+.leaderboard-head .game-status,
+.card .head .history-graph-link {
+  color: #f4f6f8;
+}
+.scorecard-history-controls .btn.ghost {
+  color: #f4f6f8;
+  border-color: #ffffff66;
+}
+body[data-theme="dark"] .card .head {
+  background: #35465a;
+}
+body[data-theme="dark"] .card .head h2 {
+  color: #f4f6f8;
 }
 body:not([data-theme="dark"]) {
   background: radial-gradient(ellipse at 50% -20%, #ffffff 0%, #fbfdff 55%, #f6f9fd 100%);
