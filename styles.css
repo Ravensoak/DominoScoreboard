@@ -2978,6 +2978,7 @@ body:not([data-theme="dark"]) .card {
   margin-left: auto;
   min-width: 0;
 }
+
 .leaderboard-head .game-status {
   padding-right: 4px;
 }
@@ -3225,6 +3226,9 @@ body[data-theme="dark"] .scorecard-history-controls .btn.small:hover:not(:disabl
   border-color: #6685a8;
   background: #30435d;
 }
+body.scoreboard-page:not([data-theme="dark"]) {
+  background: radial-gradient(ellipse at 50% -20%, #f3f6fa 0%, #e9eef5 52%, #e2e9f1 100%);
+}
 @media (max-width: 560px) {
   .scorecard-history-controls { gap: 5px; }
   .scorecard-history-controls .btn.small {
@@ -3235,6 +3239,4 @@ body[data-theme="dark"] .scorecard-history-controls .btn.small:hover:not(:disabl
   }
   .history-action-icon { font-size: 22px; }
 }
-
-
 
