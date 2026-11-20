@@ -5,6 +5,7 @@ let TARGET = loadTarget();
 const STORE_KEY = "skyjo-state-v1";
 const THEME_KEY = "skyjo-theme-v1";
 const LEADERBOARD_ZOOM_KEY = "domino-leaderboard-zoom-v1";
+const SPEAK_PLAYER_NAME_KEY = "domino-speak-player-name-v1";
 const PLAYER_COLORS = ["#1677e8", "#f28c28", "#ffff00", "#000000", "#d83b3b", "#249447"];
 const EXTRA_PLAYER_COLORS = ["#8c52d8", "#168f9a", "#a25e32", "#d450a5"];
 
@@ -739,6 +740,11 @@ function animateScoreToLeaderboard(score, sourceRect, playerId, previousTotal, n
 function selectScorePad(id,v,sourceButton){
   if(gameOver()) return;
   if((state.gameType === "individual" && !state.hasScoredOnce && state.players.length === 1) || id !== scorecardEnabledPlayerId()) return;
+  const scoringPlayer = state.players.find(player=>player.id===id);
+  if(localStorage.getItem(SPEAK_PLAYER_NAME_KEY) !== "false" && scoringPlayer?.name && "speechSynthesis" in window){
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(new SpeechSynthesisUtterance(scoringPlayer.name));
+  }
   const playerIndex = state.players.findIndex(player=>player.id===id);
   const leaderboardRowId = state.gameType === "team" ? `team-${playerIndex % 2 === 0 ? 1 : 2}` : id;
   const previousTotal = Number(document.querySelector(`.prow[data-player-id="${leaderboardRowId}"] .tot-value`)?.textContent || 0);
@@ -1017,6 +1023,12 @@ roundEntryEl.addEventListener("pointerup", handlePlayerPointerUp);
 roundEntryEl.addEventListener("pointercancel", clearPlayerDrag);
 roundEntryEl.addEventListener("keydown", handlePlayerHandleKeydown);
 setTheme(localStorage.getItem(THEME_KEY) || "light");
+const speakPlayerNameInput = document.getElementById("speakPlayerNameInput");
+speakPlayerNameInput.checked = localStorage.getItem(SPEAK_PLAYER_NAME_KEY) !== "false";
+speakPlayerNameInput.addEventListener("change",()=>{
+  localStorage.setItem(SPEAK_PLAYER_NAME_KEY,String(speakPlayerNameInput.checked));
+  if(!speakPlayerNameInput.checked && "speechSynthesis" in window) window.speechSynthesis.cancel();
+});
 document.querySelectorAll("[data-theme-choice]").forEach(button=>{
   button.addEventListener("click", ()=>setTheme(button.dataset.themeChoice));
 });
