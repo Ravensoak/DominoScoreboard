@@ -1025,7 +1025,7 @@ section {
   font-size: 16px;
 }
 .pr-body {
-  padding: 14px 42px;
+  padding: 14px;
 }
 .grid-cards {
   gap: 7px;
@@ -1159,7 +1159,7 @@ section {
     padding: 12px;
   }
   .pr-body {
-    padding: 11px 33px;
+    padding: 11px;
   }
   .grid-cards {
     gap: 7px;
