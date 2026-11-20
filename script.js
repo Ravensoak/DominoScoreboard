@@ -756,7 +756,12 @@ function selectScorePad(id,v,sourceButton){
   const score = Number(v);
   if(localStorage.getItem(SPEAK_PLAYER_NAME_KEY) !== "false" && scoringPlayer?.name && "speechSynthesis" in window){
     window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(new SpeechSynthesisUtterance(`${scoringPlayer.name}, ${score} points`));
+    const announcement = new SpeechSynthesisUtterance(`${scoringPlayer.name}, ${score} points`);
+    const britishVoices = window.speechSynthesis.getVoices().filter(voice=>/^en-GB\b/i.test(voice.lang));
+    const femaleVoice = britishVoices.find(voice=>/female|woman|serena|kate|hazel|susan|samantha/i.test(voice.name));
+    if(femaleVoice || britishVoices[0]) announcement.voice = femaleVoice || britishVoices[0];
+    announcement.lang = "en-GB";
+    window.speechSynthesis.speak(announcement);
   }
   getPicks(id).cards.push(score);
   state.currentEntries.push({playerId:id,score,playerEntryIndex});
