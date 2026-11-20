@@ -741,10 +741,6 @@ function selectScorePad(id,v,sourceButton){
   if(gameOver()) return;
   if((state.gameType === "individual" && !state.hasScoredOnce && state.players.length === 1) || id !== scorecardEnabledPlayerId()) return;
   const scoringPlayer = state.players.find(player=>player.id===id);
-  if(localStorage.getItem(SPEAK_PLAYER_NAME_KEY) !== "false" && scoringPlayer?.name && "speechSynthesis" in window){
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(new SpeechSynthesisUtterance(scoringPlayer.name));
-  }
   const playerIndex = state.players.findIndex(player=>player.id===id);
   const leaderboardRowId = state.gameType === "team" ? `team-${playerIndex % 2 === 0 ? 1 : 2}` : id;
   const previousTotal = Number(document.querySelector(`.prow[data-player-id="${leaderboardRowId}"] .tot-value`)?.textContent || 0);
@@ -758,6 +754,10 @@ function selectScorePad(id,v,sourceButton){
   state.hasScoredOnce = true;
   const playerEntryIndex = getPicks(id).cards.length;
   const score = Number(v);
+  if(localStorage.getItem(SPEAK_PLAYER_NAME_KEY) !== "false" && scoringPlayer?.name && "speechSynthesis" in window){
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(new SpeechSynthesisUtterance(`${scoringPlayer.name}, ${score} points`));
+  }
   getPicks(id).cards.push(score);
   state.currentEntries.push({playerId:id,score,playerEntryIndex});
   state.lastScorerId = id;
