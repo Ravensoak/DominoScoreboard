@@ -452,7 +452,7 @@ function renderRoundEntry(){
       </div>
       <div class="pr-body">
         <div class="score-pad-section">
-        <div class="score-pad"><button type="button" class="score-pad-btn score-pad-zero" aria-pressed="false" ${isActive?'':'disabled'} onclick="selectScorePad('${pl.id}',0,this)">0</button>${scorePadBtns}</div>
+        <div class="score-pad"><div class="score-pad-zero-row"><button type="button" class="score-pad-btn score-pad-zero" aria-pressed="false" ${isActive?'':'disabled'} onclick="selectScorePad('${pl.id}',0,this)">0</button><button type="button" class="score-pad-btn score-pad-pass" aria-label="Pass (score zero)" aria-pressed="false" ${isActive?'':'disabled'} onclick="selectScorePad('${pl.id}',0,this)">Pass</button></div>${scorePadBtns}</div>
         </div>
       </div>
       <div class="pr-foot">
@@ -756,7 +756,9 @@ function selectScorePad(id,v,sourceButton){
   const score = Number(v);
   if(localStorage.getItem(SPEAK_PLAYER_NAME_KEY) !== "false" && scoringPlayer?.name && "speechSynthesis" in window){
     window.speechSynthesis.cancel();
-    const announcement = new SpeechSynthesisUtterance(`${scoringPlayer.name}, ${score} points`);
+    const isPass = sourceButton?.classList.contains("score-pad-pass");
+    const spokenScore = isPass ? "Knocking" : `${score} ${score === 1 ? "point" : "points"}`;
+    const announcement = new SpeechSynthesisUtterance(`${scoringPlayer.name}, ${spokenScore}`);
     const britishVoices = window.speechSynthesis.getVoices().filter(voice=>/^en-GB\b/i.test(voice.lang));
     const femaleVoice = britishVoices.find(voice=>/female|woman|serena|kate|hazel|susan|samantha/i.test(voice.name));
     if(femaleVoice || britishVoices[0]) announcement.voice = femaleVoice || britishVoices[0];
@@ -948,6 +950,20 @@ function confirmLowestDominoRound(){
   const selectedIds = [...document.querySelectorAll("#lowestDominoPlayers input:checked")]
     .map(input=>input.value);
   if(selectedIds.length === 0) return;
+  if(localStorage.getItem(SPEAK_PLAYER_NAME_KEY) !== "false" && "speechSynthesis" in window){
+    const selectedNames = selectedIds
+      .map(id=>state.players.find(player=>player.id===id)?.name)
+      .filter(Boolean);
+    if(selectedNames.length){
+      window.speechSynthesis.cancel();
+      const announcement = new SpeechSynthesisUtterance(`${selectedNames.join(", ")}, one for his nob`);
+      const britishVoices = window.speechSynthesis.getVoices().filter(voice=>/^en-GB\b/i.test(voice.lang));
+      const femaleVoice = britishVoices.find(voice=>/female|woman|serena|kate|hazel|susan|samantha/i.test(voice.name));
+      if(femaleVoice || britishVoices[0]) announcement.voice = femaleVoice || britishVoices[0];
+      announcement.lang = "en-GB";
+      window.speechSynthesis.speak(announcement);
+    }
+  }
   closeLowestDominoDialog();
   commitRound(selectedIds);
 }
@@ -1156,11 +1172,13 @@ window.addEventListener("keydown", e=>{
     }
   }
 
-  // Bluetooth keyboards send ordinary keyboard events. Route a digit to the
-  // matching enabled score pad button, and leave unmatched keys alone.
-  if(document.getElementById("settingsMenu")?.open || e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey || e.repeat || !/^\d$/.test(e.key)) return;
-  const scoreButton = [...document.querySelectorAll("#roundEntry .score-pad-btn:not(:disabled)")]
-    .find(button=>button.textContent.trim() === e.key);
+  // Bluetooth keyboards send ordinary keyboard events. Route digits to their
+  // matching score pad and period to Pass, leaving unmatched keys alone.
+  if(document.getElementById("settingsMenu")?.open || e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey || e.repeat || (!/^\d$/.test(e.key) && e.key !== ".")) return;
+  const enabledScoreButtons = [...document.querySelectorAll("#roundEntry .score-pad-btn:not(:disabled)")];
+  const scoreButton = e.key === "."
+    ? enabledScoreButtons.find(button=>button.classList.contains("score-pad-pass"))
+    : enabledScoreButtons.find(button=>button.textContent.trim() === e.key);
   if(!scoreButton) return;
   e.preventDefault();
   scoreButton.click();
