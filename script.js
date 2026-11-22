@@ -219,7 +219,20 @@ function highestTotal(){
 function gameOver(){ return highestTotal() >= TARGET; }
 
 /* ---------- rendering ---------- */
+function setTilePanelsExpanded(expanded){
+  document.querySelectorAll(".tile-collapse-toggle").forEach(button=>{
+    const panel = document.getElementById(button.dataset.collapseTarget);
+    if(!panel) return;
+    panel.hidden = !expanded;
+    button.setAttribute("aria-expanded",String(expanded));
+    button.textContent = expanded ? "−" : "+";
+    const action = expanded ? "Collapse" : "Expand";
+    button.setAttribute("aria-label",`${action} ${button.dataset.tileName}`);
+    button.title = `${action} ${button.dataset.tileName}`;
+  });
+}
 function render(){
+  setTilePanelsExpanded(!(state.hasScoredOnce && !gameOver()));
   updateGameStatus();
   renderWin();
   renderGameResults();
@@ -1042,6 +1055,19 @@ document.getElementById("scorecardRedo").onclick = redoScorecardAction;
 document.getElementById("endRoundBtn").onclick = openLowestDominoDialog;
 document.getElementById("cancelLowestDomino").onclick = closeLowestDominoDialog;
 document.getElementById("confirmLowestDomino").onclick = confirmLowestDominoRound;
+document.querySelectorAll(".tile-collapse-toggle").forEach(button=>{
+  button.addEventListener("click",()=>{
+    const panel = document.getElementById(button.dataset.collapseTarget);
+    if(!panel) return;
+    const expanded = button.getAttribute("aria-expanded") !== "true";
+    panel.hidden = !expanded;
+    button.setAttribute("aria-expanded",String(expanded));
+    button.textContent = expanded ? "−" : "+";
+    const action = expanded ? "Collapse" : "Expand";
+    button.setAttribute("aria-label",`${action} ${button.dataset.tileName}`);
+    button.title = `${action} ${button.dataset.tileName}`;
+  });
+});
 document.getElementById("lowestDominoPlayers").addEventListener("change", event=>{
   if(event.target.matches('input[type="checkbox"]')){
     document.getElementById("confirmLowestDomino").disabled =

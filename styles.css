@@ -1660,6 +1660,29 @@ header h1 .pip {
 .history-graph-link:hover {
   text-decoration: underline;
 }
+.tile-collapse-toggle {
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  margin-left: auto;
+  padding: 0;
+  border: 1px solid #ffffff66;
+  border-radius: 6px;
+  background: transparent;
+  color: #f4f6f8;
+  font: inherit;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+.tile-collapse-toggle:hover {
+  background: #ffffff1c;
+}
+.tile-collapse-toggle:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
+}
 body[data-theme="dark"] .history-graph-link {
   color: #8de3f7;
 }

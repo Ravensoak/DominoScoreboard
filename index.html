@@ -138,8 +138,9 @@
   <div class="card">
     <div class="head"><h2>Score history</h2>
       <a class="history-graph-link" href="graph.html">Graph <span aria-hidden="true">↗</span></a>
+      <button class="tile-collapse-toggle" type="button" data-collapse-target="historyBody" data-tile-name="Score history" aria-controls="historyBody" aria-expanded="true" aria-label="Collapse Score history" title="Collapse Score history">−</button>
     </div>
-    <div class="body">
+    <div class="body" id="historyBody">
       <div class="scroller"><table class="htable" id="history"></table></div>
     </div>
   </div>
@@ -148,8 +149,10 @@
 <!-- ADD / MANAGE PLAYERS -->
 <section>
   <div class="card">
-    <div class="head"><h2>Players</h2></div>
-    <div class="body">
+    <div class="head"><h2>Players</h2>
+      <button class="tile-collapse-toggle" type="button" data-collapse-target="playersBody" data-tile-name="Players" aria-controls="playersBody" aria-expanded="true" aria-label="Collapse Players" title="Collapse Players">−</button>
+    </div>
+    <div class="body" id="playersBody">
       <div class="addbar">
         <input id="newPlayerName" placeholder="Add player name…" maxlength="18" autocomplete="off">
         <button class="btn accent" id="addPlayerBtn">+ Add</button>
