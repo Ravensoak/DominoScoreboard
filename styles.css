@@ -3176,18 +3176,18 @@ body[data-theme="dark"] .prow.lead .rank {
   min-width: 32px;
   height: 28px;
   padding: 0 7px;
-  border: 1px solid #1682a2;
+  border: 1px solid #d4dce5;
   border-radius: 8px;
-  background: #1682a2;
-  color: #fff;
+  background: #f1f5f9;
+  color: #102b37;
   font-size: 16px;
   font-weight: 850;
   font-variant-numeric: tabular-nums;
   line-height: 1;
 }
 body[data-theme="dark"] .round-number-badge {
-  border-color: #65c7e8;
-  background: #65c7e8;
+  border-color: #d4dce5;
+  background: #f1f5f9;
   color: #102b37;
 }
 .scorecard-history-controls .btn.small {

@@ -961,6 +961,20 @@ function confirmLowestDominoRound(){
       const femaleVoice = britishVoices.find(voice=>/female|woman|serena|kate|hazel|susan|samantha/i.test(voice.name));
       if(femaleVoice || britishVoices[0]) announcement.voice = femaleVoice || britishVoices[0];
       announcement.lang = "en-GB";
+      announcement.onend = ()=>{
+        const roundAnnouncement = new SpeechSynthesisUtterance(`Round number ${state.rounds.length + 1}`);
+        if(femaleVoice || britishVoices[0]) roundAnnouncement.voice = femaleVoice || britishVoices[0];
+        roundAnnouncement.lang = "en-GB";
+        roundAnnouncement.onend = ()=>{
+          const starter = state.players.find(player=>player.id===state.roundStarterId);
+          if(!starter) return;
+          const startAnnouncement = new SpeechSynthesisUtterance(`${starter.name}, your turn to start`);
+          if(femaleVoice || britishVoices[0]) startAnnouncement.voice = femaleVoice || britishVoices[0];
+          startAnnouncement.lang = "en-GB";
+          window.speechSynthesis.speak(startAnnouncement);
+        };
+        window.speechSynthesis.speak(roundAnnouncement);
+      };
       window.speechSynthesis.speak(announcement);
     }
   }
