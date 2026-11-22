@@ -7,7 +7,7 @@ const THEME_KEY = "skyjo-theme-v1";
 const LEADERBOARD_ZOOM_KEY = "domino-leaderboard-zoom-v1";
 const SPEAK_PLAYER_NAME_KEY = "domino-speak-player-name-v1";
 const SPEECH_VOICE_KEY = "domino-speech-voice-v1";
-const PLAYER_COLORS = ["#1677e8", "#f28c28", "#ffff00", "#000000", "#d83b3b", "#249447"];
+const PLAYER_COLORS = ["#1677e8", "#f28c28", "#f2dc00", "#000000", "#d83b3b", "#249447"];
 const EXTRA_PLAYER_COLORS = ["#8c52d8", "#168f9a", "#a25e32", "#d450a5"];
 
 function speechVoiceKey(voice){
