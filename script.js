@@ -6,8 +6,39 @@ const STORE_KEY = "skyjo-state-v1";
 const THEME_KEY = "skyjo-theme-v1";
 const LEADERBOARD_ZOOM_KEY = "domino-leaderboard-zoom-v1";
 const SPEAK_PLAYER_NAME_KEY = "domino-speak-player-name-v1";
+const SPEECH_VOICE_KEY = "domino-speech-voice-v1";
 const PLAYER_COLORS = ["#1677e8", "#f28c28", "#ffff00", "#000000", "#d83b3b", "#249447"];
 const EXTRA_PLAYER_COLORS = ["#8c52d8", "#168f9a", "#a25e32", "#d450a5"];
+
+function speechVoiceKey(voice){
+  return `${voice.voiceURI || voice.name}::${voice.lang}`;
+}
+function availableSpeechVoices(){
+  return "speechSynthesis" in window ? window.speechSynthesis.getVoices() : [];
+}
+function preferredSpeechVoice(){
+  const voices = availableSpeechVoices();
+  const selectedKey = localStorage.getItem(SPEECH_VOICE_KEY);
+  if(selectedKey && selectedKey !== "auto"){
+    const selected = voices.find(voice=>speechVoiceKey(voice) === selectedKey);
+    if(selected) return selected;
+  }
+  const britishVoices = voices.filter(voice=>/^en-GB\b/i.test(voice.lang));
+  return britishVoices.find(voice=>/female|woman|serena|kate|hazel|susan|samantha/i.test(voice.name))
+    || britishVoices[0]
+    || voices.find(voice=>voice.default)
+    || null;
+}
+function configureSpeechUtterance(utterance){
+  const voice = preferredSpeechVoice();
+  if(voice){
+    utterance.voice = voice;
+    utterance.lang = voice.lang;
+  } else {
+    utterance.lang = "en-GB";
+  }
+  return utterance;
+}
 
 function playerColor(index){
   return PLAYER_COLORS[index] || EXTRA_PLAYER_COLORS[(index-PLAYER_COLORS.length)%EXTRA_PLAYER_COLORS.length];
@@ -758,11 +789,7 @@ function selectScorePad(id,v,sourceButton){
     window.speechSynthesis.cancel();
     const isPass = sourceButton?.classList.contains("score-pad-pass");
     const spokenScore = isPass ? "Knocking" : `${score} ${score === 1 ? "point" : "points"}`;
-    const announcement = new SpeechSynthesisUtterance(`${scoringPlayer.name}, ${spokenScore}`);
-    const britishVoices = window.speechSynthesis.getVoices().filter(voice=>/^en-GB\b/i.test(voice.lang));
-    const femaleVoice = britishVoices.find(voice=>/female|woman|serena|kate|hazel|susan|samantha/i.test(voice.name));
-    if(femaleVoice || britishVoices[0]) announcement.voice = femaleVoice || britishVoices[0];
-    announcement.lang = "en-GB";
+    const announcement = configureSpeechUtterance(new SpeechSynthesisUtterance(`${scoringPlayer.name}, ${spokenScore}`));
     window.speechSynthesis.speak(announcement);
   }
   getPicks(id).cards.push(score);
@@ -956,21 +983,13 @@ function confirmLowestDominoRound(){
       .filter(Boolean);
     if(selectedNames.length){
       window.speechSynthesis.cancel();
-      const announcement = new SpeechSynthesisUtterance(`${selectedNames.join(", ")}, one for his nob`);
-      const britishVoices = window.speechSynthesis.getVoices().filter(voice=>/^en-GB\b/i.test(voice.lang));
-      const femaleVoice = britishVoices.find(voice=>/female|woman|serena|kate|hazel|susan|samantha/i.test(voice.name));
-      if(femaleVoice || britishVoices[0]) announcement.voice = femaleVoice || britishVoices[0];
-      announcement.lang = "en-GB";
+      const announcement = configureSpeechUtterance(new SpeechSynthesisUtterance(`${selectedNames.join(", ")}, one for his nob`));
       announcement.onend = ()=>{
-        const roundAnnouncement = new SpeechSynthesisUtterance(`Round number ${state.rounds.length + 1}`);
-        if(femaleVoice || britishVoices[0]) roundAnnouncement.voice = femaleVoice || britishVoices[0];
-        roundAnnouncement.lang = "en-GB";
+        const roundAnnouncement = configureSpeechUtterance(new SpeechSynthesisUtterance(`Round number ${state.rounds.length + 1}`));
         roundAnnouncement.onend = ()=>{
           const starter = state.players.find(player=>player.id===state.roundStarterId);
           if(!starter) return;
-          const startAnnouncement = new SpeechSynthesisUtterance(`${starter.name}, your turn to start`);
-          if(femaleVoice || britishVoices[0]) startAnnouncement.voice = femaleVoice || britishVoices[0];
-          startAnnouncement.lang = "en-GB";
+          const startAnnouncement = configureSpeechUtterance(new SpeechSynthesisUtterance(`${starter.name}, your turn to start`));
           window.speechSynthesis.speak(startAnnouncement);
         };
         window.speechSynthesis.speak(roundAnnouncement);
@@ -1064,6 +1083,23 @@ speakPlayerNameInput.addEventListener("change",()=>{
   localStorage.setItem(SPEAK_PLAYER_NAME_KEY,String(speakPlayerNameInput.checked));
   if(!speakPlayerNameInput.checked && "speechSynthesis" in window) window.speechSynthesis.cancel();
 });
+const speechVoiceSelect = document.getElementById("speechVoiceSelect");
+function refreshSpeechVoiceOptions(){
+  const savedVoiceKey = localStorage.getItem(SPEECH_VOICE_KEY) || "auto";
+  const voices = availableSpeechVoices();
+  speechVoiceSelect.replaceChildren(new Option("Automatic (British voice)","auto"));
+  voices.forEach(voice=>{
+    speechVoiceSelect.add(new Option(`${voice.name} (${voice.lang})`,speechVoiceKey(voice)));
+  });
+  if(savedVoiceKey !== "auto" && ![...speechVoiceSelect.options].some(option=>option.value===savedVoiceKey)){
+    speechVoiceSelect.add(new Option("Saved voice unavailable",savedVoiceKey));
+  }
+  speechVoiceSelect.value = savedVoiceKey;
+  speechVoiceSelect.disabled = !("speechSynthesis" in window);
+}
+speechVoiceSelect.addEventListener("change",()=>localStorage.setItem(SPEECH_VOICE_KEY,speechVoiceSelect.value));
+refreshSpeechVoiceOptions();
+if("speechSynthesis" in window) window.speechSynthesis.addEventListener?.("voiceschanged",refreshSpeechVoiceOptions);
 document.querySelectorAll("[data-theme-choice]").forEach(button=>{
   button.addEventListener("click", ()=>setTheme(button.dataset.themeChoice));
 });

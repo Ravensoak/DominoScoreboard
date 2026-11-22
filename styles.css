@@ -1543,6 +1543,26 @@ header h1 .pip {
   accent-color: #1682a2;
   cursor: pointer;
 }
+.settings-speech-voice {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+  color: #52637a;
+  font-size: 12px;
+  font-weight: 650;
+}
+.settings-speech-voice select {
+  width: 100%;
+  min-width: 0;
+  padding: 7px 9px;
+  border: 1px solid #dce4ef;
+  border-radius: 8px;
+  background: #f6f8fc;
+  color: #26364a;
+  font: inherit;
+}
 .settings-link {
   display: flex;
   justify-content: space-between;
@@ -2548,6 +2568,14 @@ body[data-theme="dark"] .settings-refresh:hover {
 }
 body[data-theme="dark"] .settings-toggle {
   border-top-color: #454a52;
+  color: #e0e3e8;
+}
+body[data-theme="dark"] .settings-speech-voice {
+  color: #e0e3e8;
+}
+body[data-theme="dark"] .settings-speech-voice select {
+  border-color: #4a5058;
+  background: #34383e;
   color: #e0e3e8;
 }
 body[data-theme="dark"] .settings-close {
