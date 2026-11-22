@@ -387,23 +387,28 @@ function renderStandings(){
   const sorted = scoreRows(true).sort((a,b)=>b.total-a.total || a.playerIndex-b.playerIndex);
   const high = Math.max(...sorted.map(row=>row.total));
   const activeTurnId = activeScorecardPlayerId();
+  const activeTurnIndex = state.players.findIndex(player=>player.id===activeTurnId);
+  const turnColor = activeTurnIndex >= 0 ? playerColor(activeTurnIndex) : "#1682a2";
+  const turnIndicatorHtml = `<span class="turn-indicator" style="--turn-color:${turnColor}" role="img" aria-label="Current turn to score" title="Current turn to score"></span>`;
   el.innerHTML = sorted.map((pl,i)=>{
     const playerIndex = pl.playerIndex;
     const tot = pl.total;
     const room = Math.max(0, TARGET - tot);
     const isLead = tot === high;
-    const isTurn = state.gameType !== "team" && pl.id === activeTurnId;
+    const isTurn = pl.playerIds.includes(activeTurnId);
     const isOut = tot >= TARGET;
     const pct = Math.min(100, tot/TARGET*100);
     const change = latestLeaderboardChange(pl);
+    const nameHtml = state.gameType === "team"
+      ? `<span class="player-name-text team-player-names">${pl.members.map((member,index)=>`${index ? '<span class="team-name-join">&amp;</span>' : ""}<span class="team-member-name" data-player-id="${member.id}">${member.id===activeTurnId && !deferPlayerTurnAnimation ? turnIndicatorHtml : ""}<span class="team-member-label">${escapeHtml(member.name)}</span></span>`).join("")}</span>`
+      : `${isTurn && !deferPlayerTurnAnimation ? turnIndicatorHtml : ""}<span class="player-name-text">${escapeHtml(pl.name)}</span>`;
     const awayHtml = isOut ? '<b>OVER '+TARGET+'</b>'
                            : '<b>'+room+'</b><br>to '+TARGET;
     return `<div class="prow ${isOut?'out':''} ${isLead?'lead':''} ${(!isOut&&room<=20&&!isLead)?'danger':''}" data-player-id="${pl.id}" style="--player-color:${playerColor(playerIndex)}">
       <div class="rank">${i+1}</div>
       <div style="flex:1 1 auto; min-width:0;">
         <div class="nm" ${state.gameType === "team" ? "" : `onclick="renamePlayer('${pl.id}')" title="tap to rename"`}>
-          <span class="player-name-text">${escapeHtml(pl.name)}</span>
-          ${isTurn && !deferPlayerTurnAnimation ? `<span class="turn-indicator" style="--turn-color:${playerColor(playerIndex)}" role="img" aria-label="Current turn to score" title="Current turn to score"></span>` : ""}
+          ${nameHtml}
         </div>
         <div class="barwrap"><div class="bar" style="width:${pct}%"></div></div>
       </div>
@@ -440,10 +445,11 @@ function renderStandings(){
 }
 
 function refreshLeaderboardTurnIndicator(){
-  const activeId = state.gameType === "team" ? null : activeScorecardPlayerId();
+  const activeId = activeScorecardPlayerId();
   document.querySelectorAll(".prow").forEach(row=>{
     row.querySelector(".turn-indicator")?.remove();
-    if(row.dataset.playerId !== activeId) return;
+    const rowInfo = scoreRows().find(item=>item.id===row.dataset.playerId);
+    if(!rowInfo?.playerIds.includes(activeId)) return;
     const playerIndex = state.players.findIndex(player=>player.id===activeId);
     const indicator = document.createElement("span");
     indicator.className = "turn-indicator";
@@ -451,8 +457,14 @@ function refreshLeaderboardTurnIndicator(){
     indicator.setAttribute("role","img");
     indicator.setAttribute("aria-label","Current turn to score");
     indicator.title = "Current turn to score";
-    const name = row.querySelector(".nm");
-    name?.insertBefore(indicator,name.querySelector(".recent-score"));
+    if(state.gameType === "team"){
+      const memberName = [...row.querySelectorAll(".team-member-name")].find(element=>element.dataset.playerId===activeId);
+      const memberLabel = memberName?.querySelector(".team-member-label");
+      memberName?.insertBefore(indicator,memberLabel || null);
+    } else {
+      const name = row.querySelector(".nm");
+      name?.insertBefore(indicator,name.querySelector(".player-name-text"));
+    }
   });
 }
 

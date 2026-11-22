@@ -220,10 +220,35 @@ section {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.team-member-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 0 1 auto;
+  vertical-align: middle;
+}
+.team-player-names {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  overflow: visible;
+  text-overflow: clip;
+}
+.team-member-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.team-name-join {
+  flex: 0 0 auto;
+}
 .turn-indicator {
   flex: 0 0 9px;
   width: 9px;
   height: 9px;
+  margin-left: 8px;
+  margin-right: 3px;
   border-radius: 50%;
   background: var(--turn-color);
   box-shadow: 0 0 0 0 color-mix(in srgb, var(--turn-color) 55%, transparent);
