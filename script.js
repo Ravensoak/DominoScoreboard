@@ -140,13 +140,41 @@ function hasScoreSelected(id){
   const picks = state.picks[id];
   return !!(picks && picks.cards && picks.cards.length);
 }
+function startingDominoCount(){ return state.players.length === 2 ? 10 : 7; }
+function countDominoesPlayed(id){
+  return state.currentEntries.filter(entry=>entry.playerId===id && !entry.isPass).length;
+}
+function playerIsOutOfDominoes(id){
+  return countDominoesPlayed(id) >= startingDominoCount();
+}
+function teamMembersForPlayer(id){
+  const playerIndex = state.players.findIndex(player=>player.id===id);
+  if(playerIndex < 0) return [];
+  const partnerIndexes = playerIndex % 2 === 0 ? [0,2] : [1,3];
+  return partnerIndexes.map(index=>state.players[index]).filter(Boolean);
+}
+function firstTeamMemberOut(teamMembers){
+  const outTimes = teamMembers.map(player=>{
+    let count = 0;
+    const entryIndex = state.currentEntries.findIndex(entry=>{
+      if(entry.playerId===player.id && !entry.isPass) count++;
+      return count >= startingDominoCount();
+    });
+    return {playerId:player.id,entryIndex};
+  }).filter(item=>item.entryIndex >= 0);
+  return outTimes.sort((a,b)=>a.entryIndex-b.entryIndex)[0]?.playerId || null;
+}
 function activeScorecardPlayerId(){
   if(state.players.length === 0) return null;
   if(!state.currentEntries.length && state.players.some(pl=>pl.id===state.roundStarterId)){
     return state.roundStarterId;
   }
   const lastIndex = state.players.findIndex(pl=>pl.id===state.lastScorerId);
-  return state.players[(lastIndex + 1) % state.players.length].id;
+  for(let offset=1;offset<=state.players.length;offset++){
+    const player = state.players[(lastIndex+offset)%state.players.length];
+    if(state.gameType !== "team" || !playerIsOutOfDominoes(player.id)) return player.id;
+  }
+  return null;
 }
 function scorecardEnabledPlayerId(){
   if(state.gameType === "team"){
@@ -191,23 +219,28 @@ function latestLeaderboardChange(row){
   const ids = row.playerIds || [];
   const currentEntries = state.currentEntries.filter(entry=>ids.includes(entry.playerId));
   if(currentEntries.length){
-    return { value:Number(currentEntries[currentEntries.length-1].score||0), lowest:false };
+    const entry = currentEntries[currentEntries.length-1];
+    return { value:Number(entry.score||0), lowest:false, firstOut:false, isPass:Boolean(entry.isPass) };
   }
   for(let index=state.rounds.length-1;index>=0;index--){
     const round = state.rounds[index];
     const turns = (round.turns||[]).filter(turn=>ids.includes(turn.playerId) && !turn.autoZero);
     if(turns.length){
       const lowest = ids.some(id=>(round.lowestDominoIds||[]).includes(id));
+      const firstOut = ids.includes(round.firstOutPlayerId);
       return {
-        value:lowest ? 1 : Number(turns[turns.length-1].score||0),
-        lowest
+        value:firstOut ? 1 : lowest ? 1 : Number(turns[turns.length-1].score||0),
+        lowest,
+        firstOut,
+        isPass:Boolean(turns[turns.length-1].isPass)
       };
     }
     const hasRaw = ids.some(id=>Object.prototype.hasOwnProperty.call(round.raw||{},id));
     if(hasRaw){
       const lowest = ids.some(id=>(round.lowestDominoIds||[]).includes(id));
-      const value = lowest ? 1 : Number(round.raw[ids.find(id=>Object.prototype.hasOwnProperty.call(round.raw||{},id))]||0);
-      return {value,lowest};
+      const firstOut = ids.includes(round.firstOutPlayerId);
+      const value = firstOut || lowest ? 1 : Number(round.raw[ids.find(id=>Object.prototype.hasOwnProperty.call(round.raw||{},id))]||0);
+      return {value,lowest,firstOut};
     }
   }
   return null;
@@ -412,7 +445,7 @@ function renderStandings(){
         </div>
         <div class="barwrap"><div class="bar" style="width:${pct}%"></div></div>
       </div>
-      <div class="tot"><span class="tot-value">${tot}</span>${change ? `<small class="recent-score">+${change.value}${change.lowest ? '<span>LD</span>' : ''}</small>` : ''}</div>
+      <div class="tot"><span class="tot-value">${tot}</span>${change ? `<small class="recent-score">${change.isPass ? 'Pass' : `+${change.value}`}${change.lowest ? '<span>LD</span>' : ''}${change.firstOut ? '<span>FO</span>' : ''}</small>` : ''}</div>
       <div class="away">${awayHtml}</div>
       ${state.gameType === "team" ? "" : `<div class="x" onclick="deletePlayer('${pl.id}')" title="remove">✕</div>`}
     </div>`;
@@ -478,6 +511,7 @@ function renderRoundEntry(){
   const visiblePlayers = showAllCards
     ? state.players
     : state.players.filter(pl=>pl.id===activePlayerId);
+  const startingDominoes = startingDominoCount();
   const previousOrder = new Map([...el.querySelectorAll(".player-round")].map((card,index)=>[
     card.dataset.playerId,
     {top:card.getBoundingClientRect().top,index}
@@ -495,6 +529,8 @@ function renderRoundEntry(){
   el.innerHTML = visiblePlayers.map(pl=>{
     const index = state.players.indexOf(pl);
     const headerColor = playerColor(index);
+    const dominoesPlayed = countDominoesPlayed(pl.id);
+    const dominoesLeft = Math.max(0,startingDominoes-dominoesPlayed);
     const isActive = pl.id === activePlayerId && !waitingForSecondPlayer && !gameFinished;
     const isLocked = pl.id !== activePlayerId || waitingForSecondPlayer || gameFinished;
     const scorePadBtns = [1,2,3,4,6,8].map(v=>
@@ -504,6 +540,7 @@ function renderRoundEntry(){
       <div class="pr-head" style="--player-color:${headerColor};--player-text-color:${playerHeaderTextColor(headerColor)}">
         ${showAllCards ? `<button type="button" class="drag-handle" aria-label="Reorder ${escapeHtml(pl.name)}; use the up and down arrow keys" title="Drag to reorder players">⠿</button>` : ""}
         <div class="nm">${escapeHtml(pl.name)}</div>
+        <span class="dominoes-left" aria-label="${dominoesLeft} dominoes left to play">${dominoesLeft} left</span>
         <span class="player-order">PLAYER ${String(index+1).padStart(2,"0")}</span>
       </div>
       <div class="pr-body">
@@ -649,6 +686,9 @@ function renderHistory(){
     if((round.lowestDominoIds||[]).length){
       historyRows.push({roundIndex,kind:"lowest-domino",playerIds:round.lowestDominoIds});
     }
+    if(round.firstOutPlayerId){
+      historyRows.push({roundIndex,kind:"first-out",playerId:round.firstOutPlayerId});
+    }
   });
   if(state.currentEntries.length){
     addTurnRows(state.currentEntries,state.rounds.length,"current-cycle");
@@ -658,6 +698,7 @@ function renderHistory(){
       if(row.kind === "cycle" || row.kind === "current-cycle"){
         const entry = row.entries.find(item=>item.playerId===pl.id);
         if(!entry) return "<td></td>";
+        if(entry.isPass) return "<td></td>";
         const title = entry.autoZero ? ' title="No score entered; recorded as 0"' : "";
         return `<td><div class="scorecell"${title}>${Number(entry.score||0)}</div></td>`;
       }
@@ -665,6 +706,11 @@ function renderHistory(){
         return row.playerIds.includes(pl.id)
           ? '<td><div class="lowest-domino-award"><span class="lowest-domino-score">1</span><span class="lowest-domino-label" title="Lowest domino">LD</span></div></td>'
           : '<td><div class="lowest-domino-zero">0</div></td>';
+      }
+      if(row.kind === "first-out"){
+        return row.playerId === pl.id
+          ? '<td><div class="lowest-domino-award"><span class="lowest-domino-score">1</span><span class="lowest-domino-label" title="First out">FO</span></div></td>'
+          : "<td></td>";
       }
       const value = Number(row.scores?.[pl.id]||0);
       return `<td><div class="scorecell">${value}</div></td>`;
@@ -817,11 +863,30 @@ function selectScorePad(id,v,sourceButton){
     const announcement = configureSpeechUtterance(new SpeechSynthesisUtterance(`${scoringPlayer.name}, ${spokenScore}`));
     window.speechSynthesis.speak(announcement);
   }
+  const isPass = Boolean(sourceButton?.classList.contains("score-pad-pass"));
   getPicks(id).cards.push(score);
-  state.currentEntries.push({playerId:id,score,playerEntryIndex});
+  state.currentEntries.push({playerId:id,score,playerEntryIndex,isPass});
   state.lastScorerId = id;
   const nextTotal = scoreRows(true).find(row=>row.id===leaderboardRowId)?.total ?? previousTotal + score;
   animateNextPlayerTurn = true;
+  const startingDominoes = startingDominoCount();
+  let firstOutPlayerId = null;
+  if(!isPass && countDominoesPlayed(id) >= startingDominoes){
+    if(state.gameType === "individual"){
+      firstOutPlayerId = id;
+    } else {
+      const teamMembers = teamMembersForPlayer(id);
+      if(teamMembers.length === 2 && teamMembers.every(player=>playerIsOutOfDominoes(player.id))){
+        firstOutPlayerId = firstTeamMemberOut(teamMembers);
+      }
+    }
+  }
+  if(firstOutPlayerId){
+    commitRound([],firstOutPlayerId);
+    showFirstOutNotice(firstOutPlayerId);
+    animateScoreToLeaderboard(score,sourceRect,leaderboardRowId,previousTotal,nextTotal);
+    return;
+  }
   if(scoreRows(true).some(row=>row.total >= TARGET)){
     commitRound();
     animateScoreToLeaderboard(score,sourceRect,leaderboardRowId,previousTotal,nextTotal);
@@ -830,7 +895,7 @@ function selectScorePad(id,v,sourceButton){
   render();
   animateScoreToLeaderboard(score,sourceRect,leaderboardRowId,previousTotal,nextTotal);
 }
-function commitRound(lowestDominoIds=[]){
+function commitRound(lowestDominoIds=[],firstOutPlayerId=null){
   if(state.players.length === 0){ alert("Add players first."); return; }
 
   const roundStarterId = state.currentEntries[0]?.playerId || activeScorecardPlayerId();
@@ -841,24 +906,16 @@ function commitRound(lowestDominoIds=[]){
   recordScorecardChange();
   const turns = state.currentEntries.map(entry=>({...entry}));
   const playerCount = state.players.length;
-  const remainder = turns.length % playerCount;
-  const missingCount = remainder === 0 ? (turns.length === 0 ? playerCount : 0) : playerCount - remainder;
-  const nextPlayerIndex = Math.max(0,state.players.findIndex(pl=>pl.id===activeScorecardPlayerId()));
-  for(let offset=0;offset<missingCount;offset++){
-    const player = state.players[(nextPlayerIndex+offset)%playerCount];
-    turns.push({
-      playerId:player.id,
-      score:0,
-      playerEntryIndex:getPicks(player.id).cards.length,
-      autoZero:true
-    });
-  }
   if(turns.length) state.lastScorerId = turns[turns.length-1].playerId;
   const scores = {...raw};
   const validLowestDominoIds = [...new Set(lowestDominoIds)]
     .filter(id=>state.players.some(pl=>pl.id===id));
   validLowestDominoIds.forEach(id=>{ scores[id] = Number(scores[id]||0) + 1; });
-  state.rounds.push({ scores, raw, turns, lowestDominoIds:validLowestDominoIds });
+  const validFirstOutPlayerId = firstOutPlayerId && state.players.some(pl=>pl.id===firstOutPlayerId)
+    ? firstOutPlayerId
+    : null;
+  if(validFirstOutPlayerId) scores[validFirstOutPlayerId] = Number(scores[validFirstOutPlayerId]||0) + 1;
+  state.rounds.push({ scores, raw, turns, lowestDominoIds:validLowestDominoIds, firstOutPlayerId:validFirstOutPlayerId });
   const starterIndex = state.players.findIndex(pl=>pl.id===roundStarterId);
   state.roundStarterId = state.players[(Math.max(0,starterIndex)+1)%playerCount].id;
   rememberGroup();  // this roster is now a reusable player group
@@ -866,6 +923,21 @@ function commitRound(lowestDominoIds=[]){
   state.currentEntries = [];
   render();
   window.scrollTo({ top:0, behavior:"smooth" });
+}
+
+function showFirstOutNotice(playerId){
+  const player = state.players.find(item=>item.id===playerId);
+  document.getElementById("firstOutTitle").textContent = `End of Round ${state.rounds.length}`;
+  document.getElementById("firstOutMessage").textContent = `${player?.name || "The player"} is First Out.`;
+  const backdrop = document.getElementById("firstOutBackdrop");
+  backdrop.hidden = false;
+  backdrop.classList.add("show");
+  document.getElementById("continueFirstOut").focus();
+}
+function closeFirstOutNotice(){
+  const backdrop = document.getElementById("firstOutBackdrop");
+  backdrop.classList.remove("show");
+  backdrop.hidden = true;
 }
 
 function groupKey(names){ return names.map(n=>n.trim().toLowerCase()).sort().join("\u0001"); }
@@ -1067,6 +1139,7 @@ document.getElementById("scorecardRedo").onclick = redoScorecardAction;
 document.getElementById("endRoundBtn").onclick = openLowestDominoDialog;
 document.getElementById("cancelLowestDomino").onclick = closeLowestDominoDialog;
 document.getElementById("confirmLowestDomino").onclick = confirmLowestDominoRound;
+document.getElementById("continueFirstOut").onclick = closeFirstOutNotice;
 document.querySelectorAll(".tile-collapse-toggle").forEach(button=>{
   button.addEventListener("click",()=>{
     const panel = document.getElementById(button.dataset.collapseTarget);
@@ -1186,6 +1259,17 @@ window.addEventListener("keydown", e=>{
   }
 }, true);
 window.addEventListener("keydown", e=>{
+  const firstOutDialogOpen = !document.getElementById("firstOutBackdrop")?.hidden;
+  if(firstOutDialogOpen){
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    if(e.key === "Enter" || e.key === "Return" || e.key === " "){
+      document.getElementById("continueFirstOut").click();
+    } else if(e.key === "Tab"){
+      document.getElementById("continueFirstOut").focus();
+    }
+    return;
+  }
   const resultsDialogOpen = !document.getElementById("resultsBackdrop")?.hidden;
   if(resultsDialogOpen && !e.defaultPrevented && !e.ctrlKey && !e.metaKey && !e.altKey && !e.repeat){
     if(e.key === "Enter" || e.key === "Return"){
@@ -1270,7 +1354,7 @@ window.addEventListener("keydown", e=>{
   if(!scoreButton) return;
   e.preventDefault();
   scoreButton.click();
-});
+}, true);
 
 const leaderboardZoomButton = document.getElementById("leaderboardZoom");
 function setLeaderboardZoom(zoomed){
