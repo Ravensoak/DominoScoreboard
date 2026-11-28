@@ -2255,10 +2255,10 @@ body[data-theme="dark"] .instructions-header h1 {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 7px;
-  padding: 8px;
-  border: 1px solid color-mix(in srgb, var(--line) 72%, transparent);
-  border-radius: 6px;
-  background: color-mix(in srgb, var(--panel) 48%, transparent);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
 }
 .score-pad-zero-row {
   grid-column: 1 / -1;
@@ -2268,10 +2268,10 @@ body[data-theme="dark"] .instructions-header h1 {
 }
 .score-pad-btn {
   min-height: 54px;
-  border: 1px solid #c7d1df;
+  border: 1px solid #98bce9;
   border-radius: 9px;
-  background: linear-gradient(180deg, #f8faff 0%, #e8edf4 100%);
-  color: #26364d;
+  background: linear-gradient(180deg, #eaf4ff 0%, #cfe3ff 100%);
+  color: #123d70;
   font: inherit;
   font-size: 20px;
   font-weight: 750;
@@ -2281,20 +2281,20 @@ body[data-theme="dark"] .instructions-header h1 {
   transition: border-color 0.14s ease, background 0.14s ease, box-shadow 0.14s ease, transform 0.14s ease;
 }
 .score-pad-btn:hover:not(:disabled) {
-  border-color: #9cacc1;
-  background: linear-gradient(180deg, #ffffff 0%, #dce5ef 100%);
+  border-color: #6f9fdc;
+  background: linear-gradient(180deg, #f4f9ff 0%, #b9d6fb 100%);
   box-shadow: 0 3px 7px #17253b2b, inset 0 1px 0 #ffffff;
   transform: translateY(-1px);
 }
 body[data-theme="dark"] .score-pad-btn {
-  border-color: #43536d;
-  background: linear-gradient(180deg, #34435d 0%, #27364f 100%);
-  color: #edf4ff;
+  border-color: #3978bd;
+  background: linear-gradient(180deg, #285d94 0%, #1b4778 100%);
+  color: #f2f8ff;
   box-shadow: 0 2px 5px #0004, inset 0 1px 0 #ffffff14;
 }
 body[data-theme="dark"] .score-pad-btn:hover:not(:disabled) {
-  border-color: #657b9c;
-  background: linear-gradient(180deg, #3d506e 0%, #2e405d 100%);
+  border-color: #68a4e4;
+  background: linear-gradient(180deg, #3475b5 0%, #23588f 100%);
   box-shadow: 0 4px 9px #0005, inset 0 1px 0 #ffffff1a;
 }
 .score-pad-btn.is-selected,
